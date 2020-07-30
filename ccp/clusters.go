@@ -25,64 +25,144 @@ import (
 	validator "gopkg.in/validator.v2"
 )
 
-//ClusterAPIResponse
+// //ClusterAPIResponse
+// type Clusterv2 struct {
+// 	//  Cluster Variable Name in Struct
+// 	//								Go Type			Reference in JSON
+// 	UUID                      *string         `json:"uuid,omitempty"`
+// 	ProviderClientConfigUUID  *string         `json:"provider_client_config_uuid,omitempty" `
+// 	ACIProfileUUID            *string         `json:"aci_profile_uuid,omitempty"`
+// 	Name                      *string         `json:"name,omitempty"  validate:"nonzero"`
+// 	Description               *string         `json:"description,omitempty"`
+// 	Networks                  *[]string       `json:"networks,omitempty"  validate:"nonzero"`
+// 	Datacenter                *string         `json:"datacenter,omitempty"  validate:"nonzero"`
+// 	Datastore                 *string         `json:"datastore,omitempty"  validate:"nonzero"`
+// 	Cluster                   *string         `json:"cluster,omitempty" validate:"nonzero"`
+// 	ResourcePool              *string         `json:"resource_pool,omitempty"  validate:"nonzero"`
+// 	Workers                   *int64          `json:"workers,omitempty"  validate:"nonzero"`
+// 	VCPUs                     *int64          `json:"vcpus,omitempty"  "`
+// 	Memory                    *int64          `json:"memory,omitempty"  `
+// 	Type                      *int64          `json:"type,omitempty"  `
+// 	Masters                   *int64          `json:"masters,omitempty"  validate:"nonzero"`
+// 	State                     *string         `json:"state,omitempty"`
+// 	Template                  *string         `json:"template,omitempty"   `
+// 	SSHUser                   *string         `json:"ssh_user,omitempty"  validate:"nonzero"`
+// 	SSHPassword               *string         `json:"ssh_password,omitempty"`
+// 	SSHKey                    *string         `json:"ssh_key,omitempty"   validate:"nonzero"`
+// 	Labels                    *[]Label        `json:"labels,omitempty"`
+// 	Nodes                     *[]Node         `json:"nodes,omitempty"`
+// 	Deployer                  *Deployer       `json:"deployer,omitempty" validate:"nonzero"`
+// 	KubernetesVersion         *string         `json:"kubernetes_version,omitempty" validate:"nonzero"`
+// 	ClusterEnvURL             *string         `json:"cluster_env_url,omitempty"`
+// 	ClusterDashboardURL       *string         `json:"cluster_dashboard_url,omitempty"`
+// 	NetworkPlugin             *NetworkPlugin  `json:"network_plugin,omitempty" validate:"nonzero"`
+// 	CCPPrivateSSHKey          *string         `json:"ccp_private_ssh_key,omitempty"`
+// 	CCPPublicSSHKey           *string         `json:"ccp_public_ssh_key,omitempty"`
+// 	NTPPools                  *[]string       `json:"ntp_pools,omitempty"`
+// 	NTPServers                *[]string       `json:"ntp_servers,omitempty"`
+// 	IsControlCluster          *bool           `json:"is_control_cluster,omitempty"`
+// 	IsAdopt                   *bool           `json:"is_adopt,omitempty"`
+// 	RegistriesSelfSigned      *[]string       `json:"registries_self_signed,omitempty"`
+// 	RegistriesInsecure        *[]string       `json:"registries_insecure,omitempty"`
+// 	RegistriesRootCA          *[]string       `json:"registries_root_ca,omitempty"`
+// 	IngressVIPPoolID          *string         `json:"ingress_vip_pool_id,omitempty"`
+// 	IngressVIPAddrID          *string         `json:"ingress_vip_addr_id,omitempty"`
+// 	IngressVIPs               *[]string       `json:"ingress_vips,omitempty"`
+// 	KeepalivedVRID            *int64          `json:"keepalived_vrid,omitempty"`
+// 	HelmCharts                *[]HelmChart    `json:"helm_charts,omitempty"`
+// 	MasterVIPAddrID           *string         `json:"master_vip_addr_id,omitempty"`
+// 	MasterVIP                 *string         `json:"master_vip,omitempty"`
+// 	MasterMACAddresses        *[]string       `json:"master_mac_addresses,omitempty"`
+// 	AuthList                  *[]string       `json:"auth_list,omitempty"`
+// 	IsHarborEnabled           *bool           `json:"is_harbor_enabled,omitempty" `
+// 	HarborAdminServerPassword *string         `json:"harbor_admin_server_password,omitempty"`
+// 	HarborRegistrySize        *string         `json:"harbor_registry_size,omitempty"`
+// 	LoadBalancerIPNum         *int64          `json:"load_balancer_ip_num,omitempty"`
+// 	IsIstioEnabled            *bool           `json:"is_istio_enabled,omitempty"   `
+// 	WorkerNodePool            *WorkerNodePool `json:"worker_node_pool,omitempty"  validate:"nonzero" `
+// 	MasterNodePool            *MasterNodePool `json:"master_node_pool,omitempty"  validate:"nonzero" `
+// 	Infra                     *Infra          `json:"infra,omitempty"  validate:"nonzero" `
+// }
+
+// Cluster v3 cluster
 type Cluster struct {
-	UUID                      *string         `json:"uuid,omitempty"`
-	ProviderClientConfigUUID  *string         `json:"provider_client_config_uuid,omitempty" `
-	ACIProfileUUID            *string         `json:"aci_profile_uuid,omitempty"`
-	Name                      *string         `json:"name,omitempty"  validate:"nonzero"`
-	Description               *string         `json:"description,omitempty"`
-	Networks                  *[]string       `json:"networks,omitempty"  validate:"nonzero"`
-	Datacenter                *string         `json:"datacenter,omitempty"  validate:"nonzero"`
-	Datastore                 *string         `json:"datastore,omitempty"  validate:"nonzero"`
-	Cluster                   *string         `json:"cluster,omitempty" validate:"nonzero"`
-	ResourcePool              *string         `json:"resource_pool,omitempty"  validate:"nonzero"`
-	Workers                   *int64          `json:"workers,omitempty"  validate:"nonzero"`
-	VCPUs                     *int64          `json:"vcpus,omitempty"  "`
-	Memory                    *int64          `json:"memory,omitempty"  `
-	Type                      *int64          `json:"type,omitempty"  `
-	Masters                   *int64          `json:"masters,omitempty"  validate:"nonzero"`
-	State                     *string         `json:"state,omitempty"`
-	Template                  *string         `json:"template,omitempty"   `
-	SSHUser                   *string         `json:"ssh_user,omitempty"  validate:"nonzero"`
-	SSHPassword               *string         `json:"ssh_password,omitempty"`
-	SSHKey                    *string         `json:"ssh_key,omitempty"   validate:"nonzero"`
-	Labels                    *[]Label        `json:"labels,omitempty"`
-	Nodes                     *[]Node         `json:"nodes,omitempty"`
-	Deployer                  *Deployer       `json:"deployer,omitempty" validate:"nonzero"`
-	KubernetesVersion         *string         `json:"kubernetes_version,omitempty" validate:"nonzero"`
-	ClusterEnvURL             *string         `json:"cluster_env_url,omitempty"`
-	ClusterDashboardURL       *string         `json:"cluster_dashboard_url,omitempty"`
-	NetworkPlugin             *NetworkPlugin  `json:"network_plugin,omitempty" validate:"nonzero"`
-	CCPPrivateSSHKey          *string         `json:"ccp_private_ssh_key,omitempty"`
-	CCPPublicSSHKey           *string         `json:"ccp_public_ssh_key,omitempty"`
-	NTPPools                  *[]string       `json:"ntp_pools,omitempty"`
-	NTPServers                *[]string       `json:"ntp_servers,omitempty"`
-	IsControlCluster          *bool           `json:"is_control_cluster,omitempty"`
-	IsAdopt                   *bool           `json:"is_adopt,omitempty"`
-	RegistriesSelfSigned      *[]string       `json:"registries_self_signed,omitempty"`
-	RegistriesInsecure        *[]string       `json:"registries_insecure,omitempty"`
-	RegistriesRootCA          *[]string       `json:"registries_root_ca,omitempty"`
-	IngressVIPPoolID          *string         `json:"ingress_vip_pool_id,omitempty"`
-	IngressVIPAddrID          *string         `json:"ingress_vip_addr_id,omitempty"`
-	IngressVIPs               *[]string       `json:"ingress_vips,omitempty"`
-	KeepalivedVRID            *int64          `json:"keepalived_vrid,omitempty"`
-	HelmCharts                *[]HelmChart    `json:"helm_charts,omitempty"`
-	MasterVIPAddrID           *string         `json:"master_vip_addr_id,omitempty"`
-	MasterVIP                 *string         `json:"master_vip,omitempty"`
-	MasterMACAddresses        *[]string       `json:"master_mac_addresses,omitempty"`
-	AuthList                  *[]string       `json:"auth_list,omitempty"`
-	IsHarborEnabled           *bool           `json:"is_harbor_enabled,omitempty" `
-	HarborAdminServerPassword *string         `json:"harbor_admin_server_password,omitempty"`
-	HarborRegistrySize        *string         `json:"harbor_registry_size,omitempty"`
-	LoadBalancerIPNum         *int64          `json:"load_balancer_ip_num,omitempty"`
-	IsIstioEnabled            *bool           `json:"is_istio_enabled,omitempty"   `
-	WorkerNodePool            *WorkerNodePool `json:"worker_node_pool,omitempty"  validate:"nonzero" `
-	MasterNodePool            *MasterNodePool `json:"master_node_pool,omitempty"  validate:"nonzero" `
-	Infra                     *Infra          `json:"infra,omitempty"  validate:"nonzero" `
+	//  Cluster Variable Name in Struct
+	//								Go Type			Reference in JSON
+	UUID                     *string `json:"id,omitempty"` //
+	Type                     *int64  `json:"type,omitempty"  `
+	Name                     *string `json:"name,omitempty"  validate:"nonzero"`
+	ProviderClientConfigUUID *string `json:"provider,omitempty" `
+	Status                   *string `json:"status,omitempty" `
+	KubernetesVersion        *string `json:"kubernetes_version,omitempty" validate:"nonzero"`
+	KubeConfig               *string `json:"kubeconfig,omitempty" validate:"nonzero"`
+
+	IPAllocationMethod   *string         `json:"ip_allocation_method,omitempty" validate:"nonzero"`
+	MasterVIP            *string         `json:"master_vip,omitempty"`
+	LoadBalancerIPNum    *int64          `json:"load_balancer_ip_num,omitempty"`
+	SubnetID             *string         `json:"subnet_id,omitempty"`
+	NTPPools             *[]string       `json:"ntp_pools,omitempty"`
+	NTPServers           *[]string       `json:"ntp_servers,omitempty"`
+	RegistriesRootCA     *[]string       `json:"root_ca_registries,omitempty"`
+	RegistriesSelfSigned *[]string       `json:"self_signed_registries,omitempty"`
+	RegistriesInsecure   *[]string       `json:"insecure_registries,omitempty"`
+	DockerProxyHTTP      *string         `json:"docker_http_proxy,omitempty"`
+	DockerProxyHTTPS     *string         `json:"docker_https_proxy,omitempty"`
+	DockerBIP            *string         `json:"docker_bip,omitempty"`
+	Infra                *Infra          `json:"vsphere_,omitempty"  validate:"nonzero" `
+	MasterNodePool       *MasterNodePool `json:"master_group,omitempty"  validate:"nonzero" `
+	WorkerNodePool       *WorkerNodePool `json:"node_groups,omitempty"  validate:"nonzero" `
+	NetworkPlugin        *NetworkPlugin  `json:"network_plugin_profile,omitempty" validate:"nonzero"`
+	IngressAsLB          *string         `json:"ingress_as_lb,omitempty"`
+	NginxIngressClass    *string         `json:"nginx_ingress_class,omitempty"`
+	ETCDEncrypted        *string         `json:"etcd_encrypted,omitempty"`
+	SkipManagement       *string         `json:"skip_management,omitempty"`
+	DockerNoProxy        *[]string       `json:"docker_no_proxy,omitempty"`
+	RoutableCIDR         *string         `json:"routable_cidr,omitempty"`
+	ImagePrefix          *string         `json:"image_prefix,omitempty"`
+	ACIProfileUUID       *string         `json:"aci_profile,omitempty"`
+	Description          *string         `json:"description,omitempty"`
+	AWSIamEnabled        *string         `json:"aws_iam_enabled,omitempty"`
+	// V2 things no longer used
+	// Description               *string      `json:"description,omitempty"`
+	// Networks                  *[]string    `json:"networks,omitempty"  validate:"nonzero"`
+	// Datacenter                *string      `json:"datacenter,omitempty"  validate:"nonzero"`
+	// Datastore                 *string      `json:"datastore,omitempty"  validate:"nonzero"`
+	// Cluster                   *string      `json:"cluster,omitempty" validate:"nonzero"`
+	// ResourcePool              *string      `json:"resource_pool,omitempty"  validate:"nonzero"`
+	// Workers                   *int64       `json:"workers,omitempty"  validate:"nonzero"`
+	// VCPUs                     *int64       `json:"vcpus,omitempty"  "`
+	// Memory                    *int64       `json:"memory,omitempty"  `
+	// Masters                   *int64       `json:"masters,omitempty"  validate:"nonzero"`
+	// State                     *string      `json:"state,omitempty"`
+	// Template                  *string      `json:"template,omitempty"   `
+	// SSHUser                   *string      `json:"ssh_user,omitempty"  validate:"nonzero"`
+	// SSHPassword               *string      `json:"ssh_password,omitempty"`
+	// SSHKey                    *string      `json:"ssh_key,omitempty"   validate:"nonzero"`
+	// Labels                    *[]Label     `json:"labels,omitempty"`
+	// Nodes                     *[]Node      `json:"nodes,omitempty"`
+	// Deployer                  *Deployer    `json:"deployer,omitempty" validate:"nonzero"`
+	// ClusterEnvURL             *string      `json:"cluster_env_url,omitempty"`
+	// ClusterDashboardURL       *string      `json:"cluster_dashboard_url,omitempty"`
+	// CCPPrivateSSHKey          *string      `json:"ccp_private_ssh_key,omitempty"`
+	// CCPPublicSSHKey           *string      `json:"ccp_public_ssh_key,omitempty"`
+	// IsControlCluster          *bool        `json:"is_control_cluster,omitempty"`
+	// IsAdopt                   *bool        `json:"is_adopt,omitempty"`
+	// IngressVIPPoolID          *string      `json:"ingress_vip_pool_id,omitempty"`
+	// IngressVIPAddrID          *string      `json:"ingress_vip_addr_id,omitempty"`
+	// IngressVIPs               *[]string    `json:"ingress_vips,omitempty"`
+	// KeepalivedVRID            *int64       `json:"keepalived_vrid,omitempty"`
+	// HelmCharts                *[]HelmChart `json:"helm_charts,omitempty"`
+	// MasterVIPAddrID           *string      `json:"master_vip_addr_id,omitempty"`
+	// MasterMACAddresses        *[]string    `json:"master_mac_addresses,omitempty"`
+	// AuthList                  *[]string    `json:"auth_list,omitempty"`
+	// IsHarborEnabled           *bool        `json:"is_harbor_enabled,omitempty" `
+	// HarborAdminServerPassword *string      `json:"harbor_admin_server_password,omitempty"`
+	// HarborRegistrySize        *string      `json:"harbor_registry_size,omitempty"`
+	// IsIstioEnabled            *bool        `json:"is_istio_enabled,omitempty"   `
 }
 
-type Infra struct {
+// Infra updated for v3
+type Infra struct { // checked for v3
 	Datacenter   *string   `json:"datacenter,omitempty"  validate:"nonzero"`
 	Datastore    *string   `json:"datastore,omitempty"  validate:"nonzero"`
 	Cluster      *string   `json:"cluster,omitempty" validate:"nonzero"`
@@ -90,45 +170,88 @@ type Infra struct {
 	ResourcePool *string   `json:"resource_pool,omitempty"  validate:"nonzero"`
 }
 
+// MasterNodePool updated for v3
+type MasterNodePool struct {
+	// from v2
+	VCPUs    *int64  `json:"vcpus,omitempty" validate:"nonzero"`
+	Memory   *int64  `json:"memory_mb,omitempty" validate:"nonzero"`
+	Template *string `json:"template,omitempty" validate:"nonzero"`
+	// new in v3
+	Name              *string   `json:"name,omitempty"`
+	Size              *int64    `json:"size,omitempty"`
+	GPUs              *[]string `json:"gpus,omitempty"`
+	SSHUser           *string   `json:"ssh_user,omitempty"`
+	SSHKey            *string   `json:"ssh_key,omitempty"`
+	Node              *Node     `json:"nodes,omitempty"`
+	KubernetesVersion *string   `json:"kubernetes_version,omitempty"`
+}
+
+// Node updated for v3
+type Node struct {
+	// v3 clusters
+	Name         *string `json:"name,omitempty"`
+	State        *string `json:"status,omitempty"`
+	Status       *string `json:"status,omitempty"`
+	PublicIP     *string `json:"public_ip,omitempty"`
+	PrivateIP    *string `json:"private_ip,omitempty"`
+	StatusDetail *string `json:"status_detail,omitempty"`
+	StatusReason *string `json:"status_reason,omitempty"`
+}
+
+// WorkerNodePool are the worker nodes - updated for v3
+type WorkerNodePool struct {
+	// from v2
+	VCPUs    *int64  `json:"vcpus,omitempty" validate:"nonzero"`
+	Memory   *int64  `json:"memory_mb,omitempty" validate:"nonzero"`
+	Template *string `json:"template,omitempty" validate:"nonzero"`
+	// new in v3
+	Name              *string   `json:"name,omitempty"`
+	Size              *int64    `json:"size,omitempty"`
+	GPUs              *[]string `json:"gpus,omitempty"`
+	SSHUser           *string   `json:"ssh_user,omitempty"`
+	SSHKey            *string   `json:"ssh_key,omitempty"`
+	Node              *Node     `json:"nodes,omitempty"`
+	KubernetesVersion *string   `json:"kubernetes_version,omitempty"`
+}
+
+// Label updated for v3
 type Label struct {
 	Key   *string `json:"key,omitempty"`
 	Value *string `json:"value,omitempty"`
 }
 
-type Node struct {
-	UUID              *string   `json:"uuid,omitempty"`
-	Name              *string   `json:"name,omitempty"`
-	PublicIP          *string   `json:"public_ip,omitempty"`
-	PrivateIP         *string   `json:"private_ip,omitempty"`
-	IsMaster          *bool     `json:"is_master,omitempty"`
-	State             *string   `json:"state,omitempty"`
-	CloudInitData     *string   `json:"cloud_init_data,omitempty"`
-	KubernetesVersion *string   `json:"kubernetes_version,omitempty"`
-	ErrorLog          *string   `json:"error_log,omitempty"`
-	Template          *string   `json:"template,omitempty"`
-	MacAddresses      *[]string `json:"mac_addresses,omitempty"`
-}
-
+// Deployer updated for v3
 type Deployer struct {
 	ProxyCMD     *string   `json:"proxy_cmd,omitempty"`
 	ProviderType *string   `json:"provider_type,omitempty" validate:"nonzero"`
 	Provider     *Provider `json:"provider,omitempty" validate:"nonzero"`
 }
 
+// NetworkPlugin updated for v3
 type NetworkPlugin struct {
 	Name    *string `json:"name,omitempty"`
-	Status  *string `json:"status,omitempty"`
 	Details *string `json:"details,omitempty"`
 }
 
-type HelmChart struct {
-	HelmChartUUID *string `json:"helmchart_uuid,omitempty"`
-	ClusterUUID   *string `json:"cluster_UUID,omitempty"`
-	ChartURL      *string `json:"chart_url,omitempty"`
-	Name          *string `json:"name,omitempty"`
-	Options       *string `json:"options,omitempty"`
-}
+// type NetworkPlugin_nested struct {
+// 	Name    *string               `json:"name,omitempty"`
+// 	Details *NetworkPluginDetails `json:"details,omitempty"`
+// }
 
+// // NetworkPluginDetails updated for v3
+// type NetworkPluginDetails struct {
+// 	PodCIDR *string `json:"pod_cidr,omitempty"`
+// }
+
+// type HelmChart struct {
+// 	HelmChartUUID *string `json:"helmchart_uuid,omitempty"`
+// 	ClusterUUID   *string `json:"cluster_UUID,omitempty"`
+// 	ChartURL      *string `json:"chart_url,omitempty"`
+// 	Name          *string `json:"name,omitempty"`
+// 	Options       *string `json:"options,omitempty"`
+// }
+
+// Provider vsphere provider for v2
 type Provider struct {
 	VsphereDataCenter         *string              `json:"vsphere_datacenter,omitempty"`
 	VsphereDatastore          *string              `json:"vsphere_datastore,omitempty"`
@@ -138,6 +261,7 @@ type Provider struct {
 	ClientConfig              *VsphereClientConfig `json:"client_config,omitempty"`
 }
 
+// VsphereClientConfig for provider
 type VsphereClientConfig struct {
 	IP       *string `json:"ip,omitempty"`
 	Port     *int64  `json:"port,omitempty"`
@@ -145,21 +269,10 @@ type VsphereClientConfig struct {
 	Password *string `json:"password,omitempty"`
 }
 
-type WorkerNodePool struct {
-	VCPUs    *int64  `json:"vcpus,omitempty" validate:"nonzero"`
-	Memory   *int64  `json:"memory,omitempty" validate:"nonzero"`
-	Template *string `json:"template,omitempty" validate:"nonzero"`
-}
-
-type MasterNodePool struct {
-	VCPUs    *int64  `json:"vcpus,omitempty" validate:"nonzero"`
-	Memory   *int64  `json:"memory,omitempty" validate:"nonzero"`
-	Template *string `json:"template,omitempty" validate:"nonzero"`
-}
-
+// GetClusters function for v3
 func (s *Client) GetClusters() ([]Cluster, error) {
 
-	url := fmt.Sprintf(s.BaseURL + "/2/clusters")
+	url := fmt.Sprintf(s.BaseURL + "/v3/clusters")
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -179,9 +292,64 @@ func (s *Client) GetClusters() ([]Cluster, error) {
 	return data, nil
 }
 
+// v2 cluster
+// func (s *Client) GetCluster(clusterName string) (*Cluster, error) {
+//
+// 	url := fmt.Sprintf(s.BaseURL + "/2/clusters/" + clusterName)
+//
+// 	req, err := http.NewRequest("GET", url, nil)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	bytes, err := s.doRequest(req)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	var data *Cluster
+//
+// 	err = json.Unmarshal(bytes, &data)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	return data, nil
+// }
+
+// GetClusterByName v3 cluster
+func (s *Client) GetClusterByName(clusterName string) ([]Cluster, error) {
+
+	// 1) get All Clusters, find cluster that matches clusterName, get UUID
+	// 2) get cluster
+	// get
+	url := fmt.Sprintf(s.BaseURL + "/v3/clusters/")
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	bytes, err := s.doRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	var data []Cluster
+
+	err = json.Unmarshal(bytes, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	// loop over &data Cluster struct and find cluster Name
+	// return UUID
+	return data, nil
+}
+
+// GetCluster v3 cluster -- todo change this to UUID
 func (s *Client) GetCluster(clusterName string) (*Cluster, error) {
 
-	url := fmt.Sprintf(s.BaseURL + "/2/clusters/" + clusterName)
+	// 1) get All Clusters, find cluster that matches clusterName, get UUID
+	// 2) get cluster
+	// get
+	url := fmt.Sprintf(s.BaseURL + "/v3/clusters/" + clusterName) // I don't think this is working how I want it to
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -201,107 +369,108 @@ func (s *Client) GetCluster(clusterName string) (*Cluster, error) {
 	return data, nil
 }
 
-func (s *Client) GetClusterHealth(clusterUUID string) (*Cluster, error) {
+// func (s *Client) GetClusterHealth(clusterUUID string) (*Cluster, error) {
 
-	url := fmt.Sprintf(s.BaseURL + "/2/clusters/" + clusterUUID + "/health")
+// 	url := fmt.Sprintf(s.BaseURL + "/2/clusters/" + clusterUUID + "/health")
 
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	bytes, err := s.doRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	var data *Cluster
+// 	req, err := http.NewRequest("GET", url, nil)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	bytes, err := s.doRequest(req)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	var data *Cluster
 
-	err = json.Unmarshal(bytes, &data)
-	if err != nil {
-		return nil, err
-	}
+// 	err = json.Unmarshal(bytes, &data)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	return data, nil
-}
+// 	return data, nil
+// }
 
-func (s *Client) GetClusterAuthz(clusterUUID string) (*Cluster, error) {
+// func (s *Client) GetClusterAuthz(clusterUUID string) (*Cluster, error) {
 
-	url := fmt.Sprintf(s.BaseURL + "/2/clusters/" + clusterUUID + "/authz")
+// 	url := fmt.Sprintf(s.BaseURL + "/2/clusters/" + clusterUUID + "/authz")
 
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	bytes, err := s.doRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	var data *Cluster
+// 	req, err := http.NewRequest("GET", url, nil)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	bytes, err := s.doRequest(req)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	var data *Cluster
 
-	err = json.Unmarshal(bytes, &data)
-	if err != nil {
-		return nil, err
-	}
+// 	err = json.Unmarshal(bytes, &data)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	return data, nil
-}
+// 	return data, nil
+// }
 
-func (s *Client) GetClusterDashboard(clusterUUID string) (*string, error) {
+// func (s *Client) GetClusterDashboard(clusterUUID string) (*string, error) {
 
-	url := fmt.Sprintf(s.BaseURL + "/2/clusters/" + clusterUUID + "/dashboard")
+// 	url := fmt.Sprintf(s.BaseURL + "/2/clusters/" + clusterUUID + "/dashboard")
 
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	bytes, err := s.doRequest(req)
-	if err != nil {
-		return nil, err
-	}
+// 	req, err := http.NewRequest("GET", url, nil)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	bytes, err := s.doRequest(req)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	data := string(bytes)
-	return &data, nil
-}
+// 	data := string(bytes)
+// 	return &data, nil
+// }
 
-func (s *Client) GetClusterEnv(clusterUUID string) (*string, error) {
+// func (s *Client) GetClusterEnv(clusterUUID string) (*string, error) {
 
-	url := fmt.Sprintf(s.BaseURL + "/2/clusters/" + clusterUUID + "/env")
+// 	url := fmt.Sprintf(s.BaseURL + "/2/clusters/" + clusterUUID + "/env")
 
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	bytes, err := s.doRequest(req)
-	if err != nil {
-		return nil, err
-	}
+// 	req, err := http.NewRequest("GET", url, nil)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	bytes, err := s.doRequest(req)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	data := string(bytes)
-	return &data, nil
-}
+// 	data := string(bytes)
+// 	return &data, nil
+// }
 
-func (s *Client) GetClusterHelmCharts(clusterUUID string) (*HelmChart, error) {
+// func (s *Client) GetClusterHelmCharts(clusterUUID string) (*HelmChart, error) {
 
-	url := fmt.Sprintf(s.BaseURL + "/2/clusters/" + clusterUUID + "/helmcharts")
+// 	url := fmt.Sprintf(s.BaseURL + "/2/clusters/" + clusterUUID + "/helmcharts")
 
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	bytes, err := s.doRequest(req)
-	if err != nil {
-		return nil, err
-	}
+// 	req, err := http.NewRequest("GET", url, nil)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	bytes, err := s.doRequest(req)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	var data *HelmChart
+// 	var data *HelmChart
 
-	err = json.Unmarshal(bytes, &data)
-	if err != nil {
-		return nil, err
-	}
+// 	err = json.Unmarshal(bytes, &data)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	return data, nil
-}
+// 	return data, nil
+// }
 
+// AddCluster creates a new cluster
 func (s *Client) AddCluster(cluster *Cluster) (*Cluster, error) {
 
 	var data Cluster
@@ -310,7 +479,7 @@ func (s *Client) AddCluster(cluster *Cluster) (*Cluster, error) {
 		return nil, errs
 	}
 
-	url := fmt.Sprintf(s.BaseURL + "/2/clusters")
+	url := fmt.Sprintf(s.BaseURL + "/v3/clusters")
 
 	j, err := json.Marshal(cluster)
 
@@ -341,6 +510,7 @@ func (s *Client) AddCluster(cluster *Cluster) (*Cluster, error) {
 	return cluster, nil
 }
 
+// AddClusterBasic add a v3 cluster the easy way
 func (s *Client) AddClusterBasic(cluster *Cluster) (*Cluster, error) {
 
 	/*
@@ -381,36 +551,47 @@ func (s *Client) AddClusterBasic(cluster *Cluster) (*Cluster, error) {
 	if nonzero(cluster.Name) {
 		return nil, errors.New("Cluster.Name is missing")
 	}
-	if nonzero(cluster.Datacenter) {
-		return nil, errors.New("Cluster.Datacenter is missing")
+	if nonzero(cluster.Infra.Datacenter) {
+		return nil, errors.New("Cluster.Infra.Datacenter is missing")
 	}
-	if nonzero(cluster.Cluster) {
-		return nil, errors.New("Cluster.Cluster is missing")
+
+	// if nonzero(cluster.ResourcePool) {
+	// 	return nil, errors.New("Cluster.ResourcePool is missing")
+	// }
+	if nonzero(cluster.MasterNodePool.SSHUser) {
+		return nil, errors.New("cluster.MasterNodePool.SSHUser is missing")
 	}
-	if nonzero(cluster.ResourcePool) {
-		return nil, errors.New("Cluster.ResourcePool is missing")
+	if nonzero(cluster.MasterNodePool.SSHKey) {
+		return nil, errors.New("cluster.MasterNodePool.SSHKey is missing")
 	}
-	if nonzero(cluster.SSHUser) {
-		return nil, errors.New("Cluster.SSHUser is missing")
+
+	if nonzero(cluster.WorkerNodePool.SSHUser) {
+		return nil, errors.New("cluster.WorkerNodePool.SSHUser is missing")
 	}
-	if nonzero(cluster.SSHKey) {
-		return nil, errors.New("Cluster.SSHKey is missing")
+	if nonzero(cluster.WorkerNodePool.SSHKey) {
+		return nil, errors.New("cluster.WorkerNodePool.SSHKey is missing")
 	}
-	if nonzero(cluster.Workers) {
-		return nil, errors.New("Cluster.Workers is missing")
+
+	if nonzero(cluster.MasterNodePool.Size) {
+		return nil, errors.New("cluster.MasterNodePool.Size is missing")
 	}
-	if nonzero(cluster.Masters) {
-		return nil, errors.New("Cluster.Masters is missing")
+	if nonzero(cluster.WorkerNodePool.Size) {
+		return nil, errors.New("cluster.WorkerNodePool.Size is missing")
 	}
-	if nonzero(cluster.IsHarborEnabled) {
-		return nil, errors.New("Cluster.IsHarborEnabled is missing")
+	// if nonzero(cluster.IsHarborEnabled) {
+	// 	return nil, errors.New("Cluster.IsHarborEnabled is missing")
+	// }
+	// if nonzero(cluster.IsIstioEnabled) {
+	// 	return nil, errors.New("Cluster.IsIstioEnabled is missing")
+	// }
+	if nonzero(cluster.MasterNodePool.Template) {
+		return nil, errors.New("cluster.MasterNodePool.Template is missing")
 	}
-	if nonzero(cluster.IsIstioEnabled) {
-		return nil, errors.New("Cluster.IsIstioEnabled is missing")
+	if nonzero(cluster.WorkerNodePool.Template) {
+		return nil, errors.New("cluster.WorkerNodePool.Template is missing")
 	}
-	if nonzero(cluster.Template) {
-		return nil, errors.New("Cluster.Template is missing")
-	}
+
+	// check that cluster.MasterNodePool.Template and cluster.WorkerNodePool.Template are the same
 
 	// Retrieve the provider client config UUID rather than have the user need to provide this themselves.
 	// This is also built for a single provider client config and as of CCP 1.5 this wll be Vsphere
@@ -421,49 +602,48 @@ func (s *Client) AddClusterBasic(cluster *Cluster) (*Cluster, error) {
 	}
 
 	networkPlugin := NetworkPlugin{
-		Name:    String("contiv-vpp"),
-		Status:  String(""),
+		Name:    String("calico"),
 		Details: String("{\"pod_cidr\":\"192.168.0.0/16\"}"),
 	}
 
-	provider := Provider{
-		VsphereDataCenter:       String(*cluster.Datacenter),
-		VsphereDatastore:        String(*cluster.Datastore),
-		VsphereClientConfigUUID: String(*providerClientConfigs[0].UUID),
-		VsphereWorkingDir:       String("/" + *cluster.Datacenter + "/vm"),
-	}
+	// provider := Provider{
+	// 	VsphereDataCenter:       String(*cluster.Infra.Datacenter),
+	// 	VsphereDatastore:        String(*cluster.Infra.Datastore),
+	// 	VsphereClientConfigUUID: String(*providerClientConfigs[0].UUID),
+	// 	//	VsphereWorkingDir:       String("/" + *cluster.Infra.Datacenter + "/vm"),
+	// }
 
-	deployer := Deployer{
-		ProviderType: String("vsphere"),
-		Provider:     &provider,
-	}
+	// deployer := Deployer{
+	// 	ProviderType: String("vsphere"),
+	// 	Provider:     &provider,
+	// }
 
 	workerNodePool := WorkerNodePool{
 		VCPUs:    Int64(2),
 		Memory:   Int64(16384),
-		Template: String(*cluster.Template),
+		Template: String(*cluster.WorkerNodePool.Template),
 	}
 
 	masterNodePool := MasterNodePool{
 		VCPUs:    Int64(2),
 		Memory:   Int64(16384),
-		Template: String(*cluster.Template),
+		Template: String(*cluster.MasterNodePool.Template),
 	}
 
 	// Since it returns a list we will use the UUID from the first element
 	cluster.ProviderClientConfigUUID = String(*providerClientConfigs[0].UUID)
-	cluster.KubernetesVersion = String("1.10.1")
-	cluster.Type = Int64(1)
+	cluster.KubernetesVersion = String("1.16.3") // todo: fetch this somehow
+	// cluster.Type = Int64(1)
 	cluster.NetworkPlugin = &networkPlugin
-	cluster.Deployer = &deployer
+	// cluster.Deployer = &deployer
 	cluster.WorkerNodePool = &workerNodePool
 	cluster.MasterNodePool = &masterNodePool
 
 	// Need to reset the cluster level template to nil otherwise we receive the following error
 	// "Cluster level template cannot be provided when master_node_pool and worker_node_pool are provided"
-	cluster.Template = nil
+	//	cluster.Template = nil
 
-	url := fmt.Sprintf(s.BaseURL + "/2/clusters")
+	url := fmt.Sprintf(s.BaseURL + "/v3/clusters")
 
 	j, err := json.Marshal(cluster)
 
@@ -494,6 +674,7 @@ func (s *Client) AddClusterBasic(cluster *Cluster) (*Cluster, error) {
 	return cluster, nil
 }
 
+// PatchCluster does the things
 func (s *Client) PatchCluster(cluster *Cluster) (*Cluster, error) {
 
 	var data Cluster
@@ -504,7 +685,7 @@ func (s *Client) PatchCluster(cluster *Cluster) (*Cluster, error) {
 
 	clusterUUID := *cluster.UUID
 
-	url := fmt.Sprintf(s.BaseURL + "/2/clusters/" + clusterUUID)
+	url := fmt.Sprintf(s.BaseURL + "/v3/clusters/" + clusterUUID)
 
 	j, err := json.Marshal(cluster)
 
@@ -535,13 +716,14 @@ func (s *Client) PatchCluster(cluster *Cluster) (*Cluster, error) {
 	return cluster, nil
 }
 
+// DeleteCluster deletes a cluster
 func (s *Client) DeleteCluster(uuid string) error {
 
 	if uuid == "" {
 		return errors.New("Cluster UUID to delete is required")
 	}
 
-	url := fmt.Sprintf(s.BaseURL + "/2/clusters/" + uuid)
+	url := fmt.Sprintf(s.BaseURL + "/v3/clusters/" + uuid)
 
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
