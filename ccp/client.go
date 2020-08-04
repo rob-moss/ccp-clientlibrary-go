@@ -27,19 +27,24 @@ import (
 //import "encoding/json"
 
 type Client struct {
-	Username string
-	Password string
-	BaseURL  string
+	Username   string
+	Password   string
+	BaseURL    string
+	XAuthToken string
+	CSRFtoken  string
 }
 
 var jar, err = cookiejar.New(nil)
 
+// NewClient returns the Client struct pointer
 func NewClient(username, password, baseURL string) *Client {
 
 	return &Client{
 		Username: username,
 		Password: password,
 		BaseURL:  baseURL,
+		// Populate XAuthToken after initialising
+		// Populate CSRFToken after initialising
 	}
 }
 
@@ -47,9 +52,14 @@ func (s *Client) doRequest(req *http.Request) ([]byte, error) {
 
 	var client *http.Client
 
+	// set to JSON
 	req.Header.Add("Content-Type", "application/json")
-	//req.SetBasicAuth(s.Username, s.Password)
+	// set X-Auth-Token header to xauthtoken from Login
+	req.Header.Add("X-Auth-Token", s.XAuthToken)
 	tr := &http.Transport{
+		// below needed to use Proxy from environment
+		Proxy: http.ProxyFromEnvironment,
+		// TLS checking disabled as most CCP instances use self-signed certs
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	client = &http.Client{Transport: tr, Jar: jar}
@@ -76,38 +86,39 @@ func (s *Client) doRequest(req *http.Request) ([]byte, error) {
 	return body, nil
 }
 
-// Helper routine used to return pointer - will used to simplify the use of the clientlibrary
+// Bool - Helper routine used to return pointer - will used to simplify the use of the clientlibrary
 func Bool(value bool) *bool {
 	return &value
 }
 
-// Helper routine used to return pointer - will used to simplify the use of the clientlibrary
+// Int - Helper routine used to return pointer - will used to simplify the use of the clientlibrary
 func Int(value int) *int {
 	return &value
 }
 
-// Helper routine used to return pointer - will used to simplify the use of the clientlibrary
+// Int64 - Helper routine used to return pointer - will used to simplify the use of the clientlibrary
 func Int64(value int64) *int64 {
 	return &value
 }
 
-// Helper routine used to return pointer - will used to simplify the use of the clientlibrary
+// String - Helper routine used to return pointer - will used to simplify the use of the clientlibrary
 func String(value string) *string {
 	return &value
 }
 
-// Helper routine used to return pointer - will used to simplify the use of the clientlibrary
+// Float32 - Helper routine used to return pointer - will used to simplify the use of the clientlibrary
 func Float32(value float32) *float32 {
 	return &value
 }
 
-// Helper routine used to return pointer - will used to simplify the use of the clientlibrary
+// Float64 - Helper routine used to return pointer - will used to simplify the use of the clientlibrary
 func Float64(value float64) *float64 {
 	return &value
 }
 
 //modified from unexported nonzero function in the validtor package
 //https://github.com/go-validator/validator/blob/v2/builtins.go
+// nonzero
 func nonzero(v interface{}) bool {
 	st := reflect.ValueOf(v)
 	nonZeroValue := false

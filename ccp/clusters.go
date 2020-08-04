@@ -25,140 +25,85 @@ import (
 	validator "gopkg.in/validator.v2"
 )
 
-// //ClusterAPIResponse
-// type Clusterv2 struct {
-// 	//  Cluster Variable Name in Struct
-// 	//								Go Type			Reference in JSON
-// 	UUID                      *string         `json:"uuid,omitempty"`
-// 	ProviderClientConfigUUID  *string         `json:"provider_client_config_uuid,omitempty" `
-// 	ACIProfileUUID            *string         `json:"aci_profile_uuid,omitempty"`
-// 	Name                      *string         `json:"name,omitempty"  validate:"nonzero"`
-// 	Description               *string         `json:"description,omitempty"`
-// 	Networks                  *[]string       `json:"networks,omitempty"  validate:"nonzero"`
-// 	Datacenter                *string         `json:"datacenter,omitempty"  validate:"nonzero"`
-// 	Datastore                 *string         `json:"datastore,omitempty"  validate:"nonzero"`
-// 	Cluster                   *string         `json:"cluster,omitempty" validate:"nonzero"`
-// 	ResourcePool              *string         `json:"resource_pool,omitempty"  validate:"nonzero"`
-// 	Workers                   *int64          `json:"workers,omitempty"  validate:"nonzero"`
-// 	VCPUs                     *int64          `json:"vcpus,omitempty"  "`
-// 	Memory                    *int64          `json:"memory,omitempty"  `
-// 	Type                      *int64          `json:"type,omitempty"  `
-// 	Masters                   *int64          `json:"masters,omitempty"  validate:"nonzero"`
-// 	State                     *string         `json:"state,omitempty"`
-// 	Template                  *string         `json:"template,omitempty"   `
-// 	SSHUser                   *string         `json:"ssh_user,omitempty"  validate:"nonzero"`
-// 	SSHPassword               *string         `json:"ssh_password,omitempty"`
-// 	SSHKey                    *string         `json:"ssh_key,omitempty"   validate:"nonzero"`
-// 	Labels                    *[]Label        `json:"labels,omitempty"`
-// 	Nodes                     *[]Node         `json:"nodes,omitempty"`
-// 	Deployer                  *Deployer       `json:"deployer,omitempty" validate:"nonzero"`
-// 	KubernetesVersion         *string         `json:"kubernetes_version,omitempty" validate:"nonzero"`
-// 	ClusterEnvURL             *string         `json:"cluster_env_url,omitempty"`
-// 	ClusterDashboardURL       *string         `json:"cluster_dashboard_url,omitempty"`
-// 	NetworkPlugin             *NetworkPlugin  `json:"network_plugin,omitempty" validate:"nonzero"`
-// 	CCPPrivateSSHKey          *string         `json:"ccp_private_ssh_key,omitempty"`
-// 	CCPPublicSSHKey           *string         `json:"ccp_public_ssh_key,omitempty"`
-// 	NTPPools                  *[]string       `json:"ntp_pools,omitempty"`
-// 	NTPServers                *[]string       `json:"ntp_servers,omitempty"`
-// 	IsControlCluster          *bool           `json:"is_control_cluster,omitempty"`
-// 	IsAdopt                   *bool           `json:"is_adopt,omitempty"`
-// 	RegistriesSelfSigned      *[]string       `json:"registries_self_signed,omitempty"`
-// 	RegistriesInsecure        *[]string       `json:"registries_insecure,omitempty"`
-// 	RegistriesRootCA          *[]string       `json:"registries_root_ca,omitempty"`
-// 	IngressVIPPoolID          *string         `json:"ingress_vip_pool_id,omitempty"`
-// 	IngressVIPAddrID          *string         `json:"ingress_vip_addr_id,omitempty"`
-// 	IngressVIPs               *[]string       `json:"ingress_vips,omitempty"`
-// 	KeepalivedVRID            *int64          `json:"keepalived_vrid,omitempty"`
-// 	HelmCharts                *[]HelmChart    `json:"helm_charts,omitempty"`
-// 	MasterVIPAddrID           *string         `json:"master_vip_addr_id,omitempty"`
-// 	MasterVIP                 *string         `json:"master_vip,omitempty"`
-// 	MasterMACAddresses        *[]string       `json:"master_mac_addresses,omitempty"`
-// 	AuthList                  *[]string       `json:"auth_list,omitempty"`
-// 	IsHarborEnabled           *bool           `json:"is_harbor_enabled,omitempty" `
-// 	HarborAdminServerPassword *string         `json:"harbor_admin_server_password,omitempty"`
-// 	HarborRegistrySize        *string         `json:"harbor_registry_size,omitempty"`
-// 	LoadBalancerIPNum         *int64          `json:"load_balancer_ip_num,omitempty"`
-// 	IsIstioEnabled            *bool           `json:"is_istio_enabled,omitempty"   `
-// 	WorkerNodePool            *WorkerNodePool `json:"worker_node_pool,omitempty"  validate:"nonzero" `
-// 	MasterNodePool            *MasterNodePool `json:"master_node_pool,omitempty"  validate:"nonzero" `
-// 	Infra                     *Infra          `json:"infra,omitempty"  validate:"nonzero" `
-// }
+/* toDo
+- Create JSON config
+- Make connection to CCP CP via Proxy (optional)
+- Set defaults: image, sshkey, sshuser, provider, network
+- Log in to CCP using X-Auth-Token
+- Create functions to:
+-- Get kubernetes version for deployments
+-- Fetch provider by name -> uuid
+-- Fetch subnet by name -> uuid
+-- Create Cluster (Calico, vSphere)
+-- Scale Cluster (Worker nodes)
+-- Delete Cluster
+
+v2 todo
+- Create functions to:
+-- Install Add-Ons
+--- Istio
+--- Harbor
+--- HX-CSI
+--- Monitoring
+--- Logging
+*/
 
 // Cluster v3 cluster
 type Cluster struct {
 	//  Cluster Variable Name in Struct
 	//								Go Type			Reference in JSON
-	UUID                     *string `json:"id,omitempty"` //
-	Type                     *int64  `json:"type,omitempty"  `
-	Name                     *string `json:"name,omitempty"  validate:"nonzero"`
-	ProviderClientConfigUUID *string `json:"provider,omitempty" `
-	Status                   *string `json:"status,omitempty" `
-	KubernetesVersion        *string `json:"kubernetes_version,omitempty" validate:"nonzero"`
-	KubeConfig               *string `json:"kubeconfig,omitempty" validate:"nonzero"`
+	UUID                     *string               `json:"id,omitempty"` //
+	Type                     *string               `json:"type,omitempty"  `
+	Name                     *string               `json:"name,omitempty"  validate:"nonzero"`
+	ProviderClientConfigUUID *string               `json:"provider,omitempty" `
+	Status                   *string               `json:"status,omitempty" `
+	KubernetesVersion        *string               `json:"kubernetes_version,omitempty" validate:"nonzero"`
+	KubeConfig               *string               `json:"kubeconfig,omitempty" validate:"nonzero"`
+	IPAllocationMethod       *string               `json:"ip_allocation_method,omitempty" validate:"nonzero"`
+	MasterVIP                *string               `json:"master_vip,omitempty"`
+	LoadBalancerIPNum        *int64                `json:"load_balancer_ip_num,omitempty"`
+	SubnetID                 *string               `json:"subnet_id,omitempty"`
+	NTPPools                 *[]string             `json:"ntp_pools,omitempty"`
+	NTPServers               *[]string             `json:"ntp_servers,omitempty"`
+	RegistriesRootCA         *[]string             `json:"root_ca_registries,omitempty"`
+	RegistriesSelfSigned     *RegistriesSelfSigned `json:"self_signed_registries,omitempty"`
+	RegistriesInsecure       *[]string             `json:"insecure_registries,omitempty"`
+	DockerProxyHTTP          *string               `json:"docker_http_proxy,omitempty"`
+	DockerProxyHTTPS         *string               `json:"docker_https_proxy,omitempty"`
+	DockerBIP                *string               `json:"docker_bip,omitempty"`
+	Infra                    *Infra                `json:"vsphere_,omitempty"  validate:"nonzero" `
+	MasterNodePool           *MasterNodePool       `json:"master_group,omitempty"  validate:"nonzero" `
+	WorkerNodePool           *[]WorkerNodePool     `json:"node_groups,omitempty"  validate:"nonzero" `
+	NetworkPlugin            *NetworkPlugin        `json:"network_plugin_profile,omitempty" validate:"nonzero"`
+	IngressAsLB              *bool                 `json:"ingress_as_lb,omitempty"`
+	NginxIngressClass        *string               `json:"nginx_ingress_class,omitempty"`
+	ETCDEncrypted            *bool                 `json:"etcd_encrypted,omitempty"`
+	SkipManagement           *bool                 `json:"skip_management,omitempty"`
+	DockerNoProxy            *[]string             `json:"docker_no_proxy,omitempty"`
+	RoutableCIDR             *string               `json:"routable_cidr,omitempty"`
+	ImagePrefix              *string               `json:"image_prefix,omitempty"`
+	ACIProfileUUID           *string               `json:"aci_profile,omitempty"`
+	Description              *string               `json:"description,omitempty"`
+	AWSIamEnabled            *string               `json:"aws_iam_enabled,omitempty"`
+}
 
-	IPAllocationMethod   *string         `json:"ip_allocation_method,omitempty" validate:"nonzero"`
-	MasterVIP            *string         `json:"master_vip,omitempty"`
-	LoadBalancerIPNum    *int64          `json:"load_balancer_ip_num,omitempty"`
-	SubnetID             *string         `json:"subnet_id,omitempty"`
-	NTPPools             *[]string       `json:"ntp_pools,omitempty"`
-	NTPServers           *[]string       `json:"ntp_servers,omitempty"`
-	RegistriesRootCA     *[]string       `json:"root_ca_registries,omitempty"`
-	RegistriesSelfSigned *[]string       `json:"self_signed_registries,omitempty"`
-	RegistriesInsecure   *[]string       `json:"insecure_registries,omitempty"`
-	DockerProxyHTTP      *string         `json:"docker_http_proxy,omitempty"`
-	DockerProxyHTTPS     *string         `json:"docker_https_proxy,omitempty"`
-	DockerBIP            *string         `json:"docker_bip,omitempty"`
-	Infra                *Infra          `json:"vsphere_,omitempty"  validate:"nonzero" `
-	MasterNodePool       *MasterNodePool `json:"master_group,omitempty"  validate:"nonzero" `
-	WorkerNodePool       *WorkerNodePool `json:"node_groups,omitempty"  validate:"nonzero" `
-	NetworkPlugin        *NetworkPlugin  `json:"network_plugin_profile,omitempty" validate:"nonzero"`
-	IngressAsLB          *string         `json:"ingress_as_lb,omitempty"`
-	NginxIngressClass    *string         `json:"nginx_ingress_class,omitempty"`
-	ETCDEncrypted        *string         `json:"etcd_encrypted,omitempty"`
-	SkipManagement       *string         `json:"skip_management,omitempty"`
-	DockerNoProxy        *[]string       `json:"docker_no_proxy,omitempty"`
-	RoutableCIDR         *string         `json:"routable_cidr,omitempty"`
-	ImagePrefix          *string         `json:"image_prefix,omitempty"`
-	ACIProfileUUID       *string         `json:"aci_profile,omitempty"`
-	Description          *string         `json:"description,omitempty"`
-	AWSIamEnabled        *string         `json:"aws_iam_enabled,omitempty"`
-	// V2 things no longer used
-	// Description               *string      `json:"description,omitempty"`
-	// Networks                  *[]string    `json:"networks,omitempty"  validate:"nonzero"`
-	// Datacenter                *string      `json:"datacenter,omitempty"  validate:"nonzero"`
-	// Datastore                 *string      `json:"datastore,omitempty"  validate:"nonzero"`
-	// Cluster                   *string      `json:"cluster,omitempty" validate:"nonzero"`
-	// ResourcePool              *string      `json:"resource_pool,omitempty"  validate:"nonzero"`
-	// Workers                   *int64       `json:"workers,omitempty"  validate:"nonzero"`
-	// VCPUs                     *int64       `json:"vcpus,omitempty"  "`
-	// Memory                    *int64       `json:"memory,omitempty"  `
-	// Masters                   *int64       `json:"masters,omitempty"  validate:"nonzero"`
-	// State                     *string      `json:"state,omitempty"`
-	// Template                  *string      `json:"template,omitempty"   `
-	// SSHUser                   *string      `json:"ssh_user,omitempty"  validate:"nonzero"`
-	// SSHPassword               *string      `json:"ssh_password,omitempty"`
-	// SSHKey                    *string      `json:"ssh_key,omitempty"   validate:"nonzero"`
-	// Labels                    *[]Label     `json:"labels,omitempty"`
-	// Nodes                     *[]Node      `json:"nodes,omitempty"`
-	// Deployer                  *Deployer    `json:"deployer,omitempty" validate:"nonzero"`
-	// ClusterEnvURL             *string      `json:"cluster_env_url,omitempty"`
-	// ClusterDashboardURL       *string      `json:"cluster_dashboard_url,omitempty"`
-	// CCPPrivateSSHKey          *string      `json:"ccp_private_ssh_key,omitempty"`
-	// CCPPublicSSHKey           *string      `json:"ccp_public_ssh_key,omitempty"`
-	// IsControlCluster          *bool        `json:"is_control_cluster,omitempty"`
-	// IsAdopt                   *bool        `json:"is_adopt,omitempty"`
-	// IngressVIPPoolID          *string      `json:"ingress_vip_pool_id,omitempty"`
-	// IngressVIPAddrID          *string      `json:"ingress_vip_addr_id,omitempty"`
-	// IngressVIPs               *[]string    `json:"ingress_vips,omitempty"`
-	// KeepalivedVRID            *int64       `json:"keepalived_vrid,omitempty"`
-	// HelmCharts                *[]HelmChart `json:"helm_charts,omitempty"`
-	// MasterVIPAddrID           *string      `json:"master_vip_addr_id,omitempty"`
-	// MasterMACAddresses        *[]string    `json:"master_mac_addresses,omitempty"`
-	// AuthList                  *[]string    `json:"auth_list,omitempty"`
-	// IsHarborEnabled           *bool        `json:"is_harbor_enabled,omitempty" `
-	// HarborAdminServerPassword *string      `json:"harbor_admin_server_password,omitempty"`
-	// HarborRegistrySize        *string      `json:"harbor_registry_size,omitempty"`
-	// IsIstioEnabled            *bool        `json:"is_istio_enabled,omitempty"   `
+// WorkerNodePool are the worker nodes - updated for v3
+type WorkerNodePool struct {
+	Name              *string   `json:"name,omitempty" validate:"nonzero"`      //v3
+	Size              *int64    `json:"size,omitempty" validate:"nonzero"`      //v3
+	Template          *string   `json:"template,omitempty" validate:"nonzero"`  //v2
+	VCPUs             *int64    `json:"vcpus,omitempty" validate:"nonzero"`     //v2
+	Memory            *int64    `json:"memory_mb,omitempty" validate:"nonzero"` //v2
+	GPUs              *[]string `json:"gpus,omitempty"`                         //v3
+	SSHUser           *string   `json:"ssh_user,omitempty"`                     //v3
+	SSHKey            *string   `json:"ssh_key,omitempty"`                      //v3
+	Node              *[]Node   `json:"nodes,omitempty"`                        //v3
+	KubernetesVersion *string   `json:"kubernetes_version,omitempty"`           //v3
+}
+
+// RegistriesSelfSigned comment
+type RegistriesSelfSigned struct {
+	Cert *string `json:"selfsignedca,omitempty" `
 }
 
 // Infra updated for v3
@@ -172,46 +117,30 @@ type Infra struct { // checked for v3
 
 // MasterNodePool updated for v3
 type MasterNodePool struct {
-	// from v2
-	VCPUs    *int64  `json:"vcpus,omitempty" validate:"nonzero"`
-	Memory   *int64  `json:"memory_mb,omitempty" validate:"nonzero"`
-	Template *string `json:"template,omitempty" validate:"nonzero"`
-	// new in v3
-	Name              *string   `json:"name,omitempty"`
-	Size              *int64    `json:"size,omitempty"`
-	GPUs              *[]string `json:"gpus,omitempty"`
-	SSHUser           *string   `json:"ssh_user,omitempty"`
-	SSHKey            *string   `json:"ssh_key,omitempty"`
-	Node              *Node     `json:"nodes,omitempty"`
-	KubernetesVersion *string   `json:"kubernetes_version,omitempty"`
+	Name              *string   `json:"name,omitempty"`                         // v2
+	Size              *int64    `json:"size,omitempty"`                         // v2
+	Template          *string   `json:"template,omitempty" validate:"nonzero"`  //v3
+	VCPUs             *int64    `json:"vcpus,omitempty" validate:"nonzero"`     //v3
+	Memory            *int64    `json:"memory_mb,omitempty" validate:"nonzero"` //v3
+	GPUs              *[]string `json:"gpus,omitempty"`                         //v3
+	SSHUser           *string   `json:"ssh_user,omitempty"`                     //v3
+	SSHKey            *string   `json:"ssh_key,omitempty"`                      //v3
+	Node              *[]Node   `json:"nodes,omitempty"`                        //v3
+	KubernetesVersion *string   `json:"kubernetes_version,omitempty"`           //v3
 }
 
 // Node updated for v3
 type Node struct {
 	// v3 clusters
 	Name         *string `json:"name,omitempty"`
-	State        *string `json:"status,omitempty"`
 	Status       *string `json:"status,omitempty"`
+	StatusDetail *string `json:"status_detail,omitempty" validate:"nonzero"`
+	StatusReason *string `json:"status_reason,omitempty" validate:"nonzero"`
 	PublicIP     *string `json:"public_ip,omitempty"`
 	PrivateIP    *string `json:"private_ip,omitempty"`
-	StatusDetail *string `json:"status_detail,omitempty"`
-	StatusReason *string `json:"status_reason,omitempty"`
-}
+	Phase        *string `json:"phase,omitempty"`
+	//	State        *string `json:"status,omitempty"`
 
-// WorkerNodePool are the worker nodes - updated for v3
-type WorkerNodePool struct {
-	// from v2
-	VCPUs    *int64  `json:"vcpus,omitempty" validate:"nonzero"`
-	Memory   *int64  `json:"memory_mb,omitempty" validate:"nonzero"`
-	Template *string `json:"template,omitempty" validate:"nonzero"`
-	// new in v3
-	Name              *string   `json:"name,omitempty"`
-	Size              *int64    `json:"size,omitempty"`
-	GPUs              *[]string `json:"gpus,omitempty"`
-	SSHUser           *string   `json:"ssh_user,omitempty"`
-	SSHKey            *string   `json:"ssh_key,omitempty"`
-	Node              *Node     `json:"nodes,omitempty"`
-	KubernetesVersion *string   `json:"kubernetes_version,omitempty"`
 }
 
 // Label updated for v3
@@ -227,21 +156,16 @@ type Deployer struct {
 	Provider     *Provider `json:"provider,omitempty" validate:"nonzero"`
 }
 
-// NetworkPlugin updated for v3
+// NetworkPlugin now caters for PluginDetails
 type NetworkPlugin struct {
-	Name    *string `json:"name,omitempty"`
-	Details *string `json:"details,omitempty"`
+	Name    *string               `json:"name,omitempty"`
+	Details *NetworkPluginDetails `json:"details,omitempty"`
 }
 
-// type NetworkPlugin_nested struct {
-// 	Name    *string               `json:"name,omitempty"`
-// 	Details *NetworkPluginDetails `json:"details,omitempty"`
-// }
-
-// // NetworkPluginDetails updated for v3
-// type NetworkPluginDetails struct {
-// 	PodCIDR *string `json:"pod_cidr,omitempty"`
-// }
+// NetworkPluginDetails updated for v3
+type NetworkPluginDetails struct {
+	PodCIDR *string `json:"pod_cidr,omitempty"`
+}
 
 // type HelmChart struct {
 // 	HelmChartUUID *string `json:"helmchart_uuid,omitempty"`
@@ -272,7 +196,7 @@ type VsphereClientConfig struct {
 // GetClusters function for v3
 func (s *Client) GetClusters() ([]Cluster, error) {
 
-	url := fmt.Sprintf(s.BaseURL + "/v3/clusters")
+	url := s.BaseURL + "/v3/clusters"
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -282,6 +206,10 @@ func (s *Client) GetClusters() ([]Cluster, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Print out the Println of bytes
+	// fmt.Println(bytes.NewBuffer(bytes).String())
+	fmt.Println(string(bytes))
 	var data []Cluster
 
 	err = json.Unmarshal(bytes, &data)
@@ -292,7 +220,39 @@ func (s *Client) GetClusters() ([]Cluster, error) {
 	return data, nil
 }
 
-// v2 cluster
+// GetClusterByName get all clusters, iterate through to find slice matching clusterName
+func (s *Client) GetClusterByName(clusterName string) (*Cluster, error) {
+
+	clusters, err := s.GetClusters()
+	if err != nil {
+		fmt.Println(err)
+		// return Cluster{}, err
+	} else {
+		fmt.Printf("* GetClusterByNameNew: Got %d clusters\n", len(clusters))
+	}
+
+	// fmt.Println("GetClusterByName: Get clustername from loop")
+	// for i := 0; i < len(clusters); i++ {
+	for i, x := range clusters {
+		// fmt.Println("Cluster found from loop: " + *clusters[i].Name)
+		// if string(*clusters[x].Name) == string(clusterName) {
+		// 	fmt.Println("Found matching cluster " + clusterName + " at postion " + string(i))
+		// 	//cluster = *data[i]
+		// 	//cluster = *data[i]
+		// 	return clusters[i], nil
+		// 	//break
+		// }
+		fmt.Printf("Iteration %d\n", i)
+		fmt.Println("Cluster found: " + string(*x.Name) + "\n")
+		if string(clusterName) == string(*x.Name) {
+			fmt.Println("Found matching cluster " + clusterName + " = " + *x.Name)
+			return &x, nil
+		}
+	}
+	return nil, errors.New("Cannot find cluster " + clusterName)
+}
+
+// GetCluster is v2 cluster
 // func (s *Client) GetCluster(clusterName string) (*Cluster, error) {
 //
 // 	url := fmt.Sprintf(s.BaseURL + "/2/clusters/" + clusterName)
@@ -315,33 +275,48 @@ func (s *Client) GetClusters() ([]Cluster, error) {
 // 	return data, nil
 // }
 
-// GetClusterByName v3 cluster
-func (s *Client) GetClusterByName(clusterName string) ([]Cluster, error) {
+// // GetClusterByName doesn't quite work
+// func (s *Client) GetClusterByName(clusterName string) (*Cluster, error) {
 
-	// 1) get All Clusters, find cluster that matches clusterName, get UUID
-	// 2) get cluster
-	// get
-	url := fmt.Sprintf(s.BaseURL + "/v3/clusters/")
+// 	// 1) get All Clusters, find cluster that matches clusterName, get UUID
+// 	// 2) get cluster
+// 	// get
+// 	url := s.BaseURL + "/v3/clusters/"
 
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	bytes, err := s.doRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	var data []Cluster
+// 	var data []Cluster
 
-	err = json.Unmarshal(bytes, &data)
-	if err != nil {
-		return nil, err
-	}
+// 	req, err := http.NewRequest("GET", url, nil)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	bytes, err := s.doRequest(req)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	// loop over &data Cluster struct and find cluster Name
-	// return UUID
-	return data, nil
-}
+// 	err = json.Unmarshal(bytes, &data)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	// loop over &data Cluster struct and find cluster Name
+// 	// return UUID
+// 	//var cluster Cluster
+
+// 	fmt.Println("Get clustername from loop")
+// 	for i := 0; i < len(data); i++ {
+// 		fmt.Println("Cluster found from loop: " + *data[i].Name)
+// 		if string(*data[i].Name) == string(clusterName) {
+// 			fmt.Println("Found matching cluster " + clusterName + " at postion " + string(i))
+// 			//cluster = *data[i]
+// 			//cluster = *data[i]
+// 			return &data[i], nil
+// 			//break
+// 		}
+// 	}
+
+// 	return nil, errors.New("Cannot find cluster")
+// }
 
 // GetCluster v3 cluster -- todo change this to UUID
 func (s *Client) GetCluster(clusterName string) (*Cluster, error) {
@@ -565,30 +540,37 @@ func (s *Client) AddClusterBasic(cluster *Cluster) (*Cluster, error) {
 		return nil, errors.New("cluster.MasterNodePool.SSHKey is missing")
 	}
 
-	if nonzero(cluster.WorkerNodePool.SSHUser) {
-		return nil, errors.New("cluster.WorkerNodePool.SSHUser is missing")
-	}
-	if nonzero(cluster.WorkerNodePool.SSHKey) {
-		return nil, errors.New("cluster.WorkerNodePool.SSHKey is missing")
+	// foobar := cluster.WorkerNodePool
+	// nodepool := &foobar[0].SSHKey
+
+	// nodepool := cluster.WorkerNodePool
+	// fmt.Println(nodepool.Name)
+
+	// loop over array of WorkerNodePool
+	for k, v := range *cluster.WorkerNodePool {
+		fmt.Printf("k=%s, v=%+v", k, v)
+
+		if nonzero(v.SSHUser) {
+			return nil, errors.New("v.SSHUser is missing")
+		}
+
+		if nonzero(v.SSHKey) {
+			return nil, errors.New("v.SSHKey is missing")
+		}
+		if nonzero(v.Size) {
+			return nil, errors.New("v.Size is missing")
+		}
+		if nonzero(v.Template) {
+			return nil, errors.New("v.Template is missing")
+		}
 	}
 
 	if nonzero(cluster.MasterNodePool.Size) {
 		return nil, errors.New("cluster.MasterNodePool.Size is missing")
 	}
-	if nonzero(cluster.WorkerNodePool.Size) {
-		return nil, errors.New("cluster.WorkerNodePool.Size is missing")
-	}
-	// if nonzero(cluster.IsHarborEnabled) {
-	// 	return nil, errors.New("Cluster.IsHarborEnabled is missing")
-	// }
-	// if nonzero(cluster.IsIstioEnabled) {
-	// 	return nil, errors.New("Cluster.IsIstioEnabled is missing")
-	// }
+
 	if nonzero(cluster.MasterNodePool.Template) {
 		return nil, errors.New("cluster.MasterNodePool.Template is missing")
-	}
-	if nonzero(cluster.WorkerNodePool.Template) {
-		return nil, errors.New("cluster.WorkerNodePool.Template is missing")
 	}
 
 	// check that cluster.MasterNodePool.Template and cluster.WorkerNodePool.Template are the same
@@ -602,8 +584,11 @@ func (s *Client) AddClusterBasic(cluster *Cluster) (*Cluster, error) {
 	}
 
 	networkPlugin := NetworkPlugin{
-		Name:    String("calico"),
-		Details: String("{\"pod_cidr\":\"192.168.0.0/16\"}"),
+		Name: String("calico"),
+		// Details: String("{\"pod_cidr\":\"192.168.0.0/16\"}"),
+		Details: &NetworkPluginDetails{
+			PodCIDR: String("192.168.0.0/16"),
+		},
 	}
 
 	// provider := Provider{
@@ -621,7 +606,7 @@ func (s *Client) AddClusterBasic(cluster *Cluster) (*Cluster, error) {
 	workerNodePool := WorkerNodePool{
 		VCPUs:    Int64(2),
 		Memory:   Int64(16384),
-		Template: String(*cluster.WorkerNodePool.Template),
+		Template: String(*cluster.MasterNodePool.Template), // use same template as master
 	}
 
 	masterNodePool := MasterNodePool{
@@ -636,7 +621,10 @@ func (s *Client) AddClusterBasic(cluster *Cluster) (*Cluster, error) {
 	// cluster.Type = Int64(1)
 	cluster.NetworkPlugin = &networkPlugin
 	// cluster.Deployer = &deployer
-	cluster.WorkerNodePool = &workerNodePool
+
+	//	cluster.WorkerNodePool = &workerNodePool
+	cluster.WorkerNodePool = &[]WorkerNodePool{workerNodePool}
+
 	cluster.MasterNodePool = &masterNodePool
 
 	// Need to reset the cluster level template to nil otherwise we receive the following error

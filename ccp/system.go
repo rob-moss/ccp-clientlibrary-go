@@ -17,8 +17,10 @@ package ccp
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 )
 
@@ -49,23 +51,144 @@ type PodStatusList struct {
 	LastTransitionTime *string `json:"LastTransitionTime,omitempty"`
 }
 
+// Login for v2
+// func (s *Client) Login(client *Client) error {
+//
+// 	url := fmt.Sprintf(s.BaseURL + "/2/system/login?username=" + client.Username + "&password=" + client.Password)
+//
+// 	j, err := json.Marshal(client)
+//
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(j))
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	_, err = s.doRequest(req)
+//
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	return nil
+// }
+
+// func (s *Client) GetLivenessHealth() (*LivenessHealth, error) {
+//
+// 	url := fmt.Sprintf(s.BaseURL + "/2/system/livenessHealth")
+//
+// 	req, err := http.NewRequest("GET", url, nil)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	bytes, err := s.doRequest(req)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	var data LivenessHealth
+//
+// 	err = json.Unmarshal(bytes, &data)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	health := &data
+//
+// 	return health, nil
+// }
+
+// LoginCreds for provider
+type LoginCreds struct {
+	Username *string `json:"username,omitempty" validate:"nonzero"`
+	Password *string `json:"password,omitempty" validate:"nonzero"`
+}
+
+// How the heck does this work?
+// func (s *Client) Login(client *Client) error {
+//       ^ attach method: can take on functions
+//                        ^ input arg
+//                                        ^ return
+
+// Login updated for v3
 func (s *Client) Login(client *Client) error {
 
-	url := fmt.Sprintf(s.BaseURL + "/2/system/login?username=" + client.Username + "&password=" + client.Password)
+	url := s.BaseURL + "/v3/system/login"
 
-	j, err := json.Marshal(client)
+	loginCreds := LoginCreds{
+		Username: String(client.Username),
+		Password: String(client.Password),
+	}
 
+	//var client *http.Client
+
+	var PTransport = &http.Transport{
+		Proxy:           http.ProxyFromEnvironment,
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	cl := http.Client{
+		Transport: PTransport,
+	}
+
+	// Marshal the JSON payload to then send
+	j, err := json.Marshal(loginCreds)
 	if err != nil {
 		return err
 	}
 
+	// print the JSON query
+	//	fmt.Println(string(j))
+	// Send the JSON payload
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(j))
 	if err != nil {
 		return err
 	}
+	req.Header.Add("Content-Type", "application/json")
 
-	_, err = s.doRequest(req)
+	// this won't work for v3 - we need to capture some headers
+	// _, err = s.doRequest(req)
 
+	// req.Header.Add("Content-Type", "application/json")
+	// // req.SetBasicAuth(s.Username, s.Password)
+	// tr := &http.Transport{
+	// 	// below needed to use Proxy from environment
+	// 	Proxy: http.ProxyFromEnvironment,
+	// 	// TLS checking disabled as most CCP instances use self-signed certs
+	// 	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	// }
+	// s.Client{Transport: tr, Jar: jar}
+	// // tr.Proxy{}
+	// http = &http.Client{Transport: tr, Jar: jar}
+
+	resp, err := cl.Do(req)
+	// fmt.Printf("xauth: " + resp)
+	fmt.Println("Response: \n")
+	fmt.Println(resp)
+
+	fmt.Println("Geting X-Auth-Token")
+
+	// get the X-Auth-Token
+	// X-Auth-Token
+
+	var xauthtoken = resp.Header.Get("X-Auth-Token")
+	fmt.Println("X-Auth-Token = " + xauthtoken)
+
+	// set xauth
+	s.XAuthToken = xauthtoken
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	bodystring := string(body)
+	fmt.Println("Body: \n")
+	fmt.Println(bodystring)
+
+	// fmt.Printf("xauth: " + xauthtoken + " csrf: " + csrftoken + "\n")
 	if err != nil {
 		return err
 	}
@@ -73,6 +196,43 @@ func (s *Client) Login(client *Client) error {
 	return nil
 }
 
+// func (s *Client) doRequest(req *http.Request) ([]byte, error) {
+//
+// 	var client *http.Client
+//
+// 	req.Header.Add("Content-Type", "application/json")
+// 	//req.SetBasicAuth(s.Username, s.Password)
+// 	tr := &http.Transport{
+// 		// below needed to use Proxy from environment
+// 		Proxy: http.ProxyFromEnvironment,
+// 		// TLS checking disabled as most CCP instances use self-signed certs
+// 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+// 	}
+// 	client = &http.Client{Transport: tr, Jar: jar}
+//
+// 	resp, err := client.Do(req)
+//
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer resp.Body.Close()
+// 	body, err := ioutil.ReadAll(resp.Body)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	if 200 != resp.StatusCode && 201 != resp.StatusCode && 202 != resp.StatusCode && 204 != resp.StatusCode {
+// 		return nil, fmt.Errorf("%s", body)
+// 	}
+//
+// 	if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	return body, nil
+// }
+
+// GetLivenessHealth foobar
 func (s *Client) GetLivenessHealth() (*LivenessHealth, error) {
 
 	url := fmt.Sprintf(s.BaseURL + "/2/system/livenessHealth")
