@@ -17,6 +17,7 @@ package ccp
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 )
@@ -34,6 +35,7 @@ type ProviderClientConfig struct {
 	// Config *Config `json:"config,omitempty"`
 }
 
+// Vsphere struct
 type Vsphere struct {
 	Datacenters *[]string `json:"Datacenters,omitempty"`
 	Clusters    *[]string `json:"Clusters,omitempty"`
@@ -43,8 +45,67 @@ type Vsphere struct {
 	Pools       *[]string `json:"Pools,omitempty"`
 }
 
-// GetProviderClientConfigs Get and return All Providers
-func (s *Client) GetProviderClientConfigs() ([]ProviderClientConfig, error) {
+// NetworkProviderSubnet struct
+type NetworkProviderSubnet struct {
+	UUID        *string   `json:"uuid,omitempty"`
+	IPVersion   *int64    `json:"ip_version,omitempty"`
+	GatewayIP   *string   `json:"gateway_ip,omitempty"`
+	CIDR        *string   `json:"cidr,omitempty"`
+	Pools       *[]string `json:"pools,omitempty"`
+	Network     *string   `json:"network,omitempty"`
+	Nameservers *[]string `json:"nameservers,omitempty"`
+	Name        *string   `json:"name,omitempty"`
+	TotalIPs    *int64    `json:"total_ips,omitempty"`
+	FreeIPs     *int64    `json:"free_ips,omitempty"`
+}
+
+// GetNetworkProviderSubnetByName Get and return named Network Provider
+func (s *Client) GetNetworkProviderSubnetByName(networkProviderName string) (*NetworkProviderSubnet, error) {
+
+	networkProviderSubnets, err := s.GetNetworkProviderSubnets()
+	if err != nil {
+		return nil, err
+	}
+	// iterate over array networkProviderSubnets
+	// var _ is discarding the iterator int
+	// var x is each singular networkProviderSubnets struct
+	for _, x := range networkProviderSubnets {
+		if networkProviderName == string(*x.Name) {
+			fmt.Println("Found matching network provider " + *x.Name)
+			return &x, nil
+		}
+	}
+
+	return nil, errors.New("Network provider " + networkProviderName + " not found")
+}
+
+// GetNetworkProviderSubnets Get and return All Providers
+func (s *Client) GetNetworkProviderSubnets() ([]NetworkProviderSubnet, error) {
+
+	url := s.BaseURL + "/2/network_service/subnets/"
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	bytes, err := s.doRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	var data []NetworkProviderSubnet
+
+	err = json.Unmarshal(bytes, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+// ----- working
+
+// GetInfraProviders Get and return All Infra Providers
+func (s *Client) GetInfraProviders() ([]ProviderClientConfig, error) {
 
 	url := fmt.Sprintf(s.BaseURL + "/v3/providers")
 
@@ -66,10 +127,10 @@ func (s *Client) GetProviderClientConfigs() ([]ProviderClientConfig, error) {
 	return data, nil
 }
 
-// GetProviderClientConfig by UUID
-func (s *Client) GetProviderClientConfig(clientUUID string) (*ProviderClientConfig, error) {
+// GetInfraProviderByUUID by UUID
+func (s *Client) GetInfraProviderByUUID(providerUUID string) (*ProviderClientConfig, error) {
 
-	url := fmt.Sprintf(s.BaseURL + "/v3/providers/" + clientUUID)
+	url := fmt.Sprintf(s.BaseURL + "/v3/providers/" + providerUUID)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -89,156 +150,22 @@ func (s *Client) GetProviderClientConfig(clientUUID string) (*ProviderClientConf
 	return data, nil
 }
 
-// func (s *Client) GetProviderClientConfigClusters(clientUUID string) ([]Cluster, error) {
+// GetInfraProviderByName by Name
+func (s *Client) GetInfraProviderByName(providerName string) (*ProviderClientConfig, error) {
 
-// 	url := fmt.Sprintf(s.BaseURL + "/2/providerclientconfigs/" + clientUUID + "/clusters")
+	providers, err := s.GetInfraProviders()
+	if err != nil {
+		return nil, err
+	}
+	// iterate over array networkProviderSubnets
+	// var _ is discarding the iterator int
+	// var x is each singular networkProviderSubnets struct
+	for _, x := range providers {
+		if providerName == string(*x.Name) {
+			fmt.Println("Found matching network provider " + *x.Name)
+			return &x, nil
+		}
+	}
 
-// 	req, err := http.NewRequest("GET", url, nil)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	bytes, err := s.doRequest(req)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	var data []Cluster
-
-// 	err = json.Unmarshal(bytes, &data)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return data, nil
-// }
-
-// func (s *Client) GetProviderClientConfigVsphereDatacenter(clientUUID string) (*Vsphere, error) {
-
-// 	url := fmt.Sprintf(s.BaseURL + "/2/providerclientconfigs/" + clientUUID + "/vsphere/datacenter")
-
-// 	req, err := http.NewRequest("GET", url, nil)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	bytes, err := s.doRequest(req)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	var data *Vsphere
-
-// 	err = json.Unmarshal(bytes, &data)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return data, nil
-// }
-
-// func (s *Client) GetProviderClientConfigVsphereDatacenterClusters(clientUUID string, datacenter string) (*Vsphere, error) {
-
-// 	url := fmt.Sprintf(s.BaseURL + "/2/providerclientconfigs/" + clientUUID + "/vsphere/datacenter/" + datacenter + "/cluster")
-
-// 	req, err := http.NewRequest("GET", url, nil)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	bytes, err := s.doRequest(req)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	var data *Vsphere
-
-// 	err = json.Unmarshal(bytes, &data)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return data, nil
-// }
-
-// func (s *Client) GetProviderClientConfigVsphereDatacenterVMs(clientUUID string, datacenter string) (*Vsphere, error) {
-
-// 	url := fmt.Sprintf(s.BaseURL + "/2/providerclientconfigs/" + clientUUID + "/vsphere/datacenter/" + datacenter + "/vm")
-
-// 	req, err := http.NewRequest("GET", url, nil)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	bytes, err := s.doRequest(req)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	var data *Vsphere
-
-// 	err = json.Unmarshal(bytes, &data)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return data, nil
-// }
-
-// func (s *Client) GetProviderClientConfigVsphereDatacenterNetworks(clientUUID string, datacenter string) (*Vsphere, error) {
-
-// 	url := fmt.Sprintf(s.BaseURL + "/2/providerclientconfigs/" + clientUUID + "/vsphere/datacenter/" + datacenter + "/network")
-
-// 	req, err := http.NewRequest("GET", url, nil)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	bytes, err := s.doRequest(req)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	var data *Vsphere
-
-// 	err = json.Unmarshal(bytes, &data)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return data, nil
-// }
-
-// func (s *Client) GetProviderClientConfigVsphereDatacenterDatastores(clientUUID string, datacenter string) (*Vsphere, error) {
-
-// 	url := fmt.Sprintf(s.BaseURL + "/2/providerclientconfigs/" + clientUUID + "/vsphere/datacenter/" + datacenter + "/datastore")
-
-// 	req, err := http.NewRequest("GET", url, nil)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	bytes, err := s.doRequest(req)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	var data *Vsphere
-
-// 	err = json.Unmarshal(bytes, &data)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return data, nil
-// }
-
-// func (s *Client) GetProviderClientConfigVsphereDatacenterClusterPools(clientUUID string, datacenter string, cluster string) (*Vsphere, error) {
-
-// 	url := fmt.Sprintf(s.BaseURL + "/2/providerclientconfigs/" + clientUUID + "/vsphere/datacenter/" + datacenter + "/cluster/" + cluster + "/pool")
-
-// 	req, err := http.NewRequest("GET", url, nil)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	bytes, err := s.doRequest(req)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	var data *Vsphere
-
-// 	err = json.Unmarshal(bytes, &data)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return data, nil
-// }
+	return nil, errors.New("Network provider " + providerName + " not found")
+}

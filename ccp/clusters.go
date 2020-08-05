@@ -274,63 +274,6 @@ func (s *Client) GetCluster(clusterUUID string) (*Cluster, error) {
 	return data, nil
 }
 
-// func (s *Client) GetClusterDashboard(clusterUUID string) (*string, error) {
-
-// 	url := fmt.Sprintf(s.BaseURL + "/2/clusters/" + clusterUUID + "/dashboard")
-
-// 	req, err := http.NewRequest("GET", url, nil)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	bytes, err := s.doRequest(req)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	data := string(bytes)
-// 	return &data, nil
-// }
-
-// func (s *Client) GetClusterEnv(clusterUUID string) (*string, error) {
-
-// 	url := fmt.Sprintf(s.BaseURL + "/2/clusters/" + clusterUUID + "/env")
-
-// 	req, err := http.NewRequest("GET", url, nil)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	bytes, err := s.doRequest(req)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	data := string(bytes)
-// 	return &data, nil
-// }
-
-// func (s *Client) GetClusterHelmCharts(clusterUUID string) (*HelmChart, error) {
-
-// 	url := fmt.Sprintf(s.BaseURL + "/2/clusters/" + clusterUUID + "/helmcharts")
-
-// 	req, err := http.NewRequest("GET", url, nil)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	bytes, err := s.doRequest(req)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	var data *HelmChart
-
-// 	err = json.Unmarshal(bytes, &data)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return data, nil
-// }
-
 // AddCluster creates a new cluster
 func (s *Client) AddCluster(cluster *Cluster) (*Cluster, error) {
 
@@ -457,8 +400,7 @@ func (s *Client) AddClusterBasic(cluster *Cluster) (*Cluster, error) {
 
 	// Retrieve the provider client config UUID rather than have the user need to provide this themselves.
 	// This is also built for a single provider client config and as of CCP 1.5 this wll be Vsphere
-	providerClientConfigs, err := s.GetProviderClientConfigs()
-
+	providerClientConfigs, err := s.GetInfraProviderByName("vsphere")
 	if err != nil {
 		return nil, err
 	}
@@ -496,7 +438,7 @@ func (s *Client) AddClusterBasic(cluster *Cluster) (*Cluster, error) {
 	}
 
 	// Since it returns a list we will use the UUID from the first element
-	cluster.ProviderClientConfigUUID = String(*providerClientConfigs[0].UUID)
+	cluster.ProviderClientConfigUUID = String(*providerClientConfigs.UUID)
 	cluster.KubernetesVersion = String("1.16.3") // todo: fetch this somehow
 	// cluster.Type = Int64(1)
 	cluster.NetworkPlugin = &networkPlugin

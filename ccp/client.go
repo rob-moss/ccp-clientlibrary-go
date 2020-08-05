@@ -26,12 +26,12 @@ import (
 
 //import "encoding/json"
 
+// Client struct
 type Client struct {
 	Username   string
 	Password   string
 	BaseURL    string
 	XAuthToken string
-	CSRFtoken  string
 }
 
 var jar, err = cookiejar.New(nil)
@@ -44,7 +44,6 @@ func NewClient(username, password, baseURL string) *Client {
 		Password: password,
 		BaseURL:  baseURL,
 		// Populate XAuthToken after initialising
-		// Populate CSRFToken after initialising
 	}
 }
 
