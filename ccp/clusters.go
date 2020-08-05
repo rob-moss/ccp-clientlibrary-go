@@ -274,6 +274,52 @@ func (s *Client) GetCluster(clusterUUID string) (*Cluster, error) {
 	return data, nil
 }
 
+// patchCluster spec for JSON scale
+type PatchCluster struct {
+	Name *string `json:"name" validate:"nonzero"`
+	Size *int64  `json:"size" validate:"nonzero"`
+}
+
+// ScaleCluster scales an existing cluster
+func (s *Client) ScaleCluster(clusterUUID, workerPoolName string, size int64) (*PatchCluster, error) {
+
+	url := s.BaseURL + "/v3/clusters/" + clusterUUID + "/node-pools/" + workerPoolName + "/"
+	fmt.Println("URL: " + url)
+
+	cluserScale := PatchCluster{
+		Name: String(workerPoolName),
+		Size: Int64(size),
+	}
+	j, err := json.Marshal(cluserScale)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println("Sending JSON patch:")
+	fmt.Println(string(j))
+
+	req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(j))
+	if err != nil {
+		return nil, err
+	}
+
+	bytes, err := s.doRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	var data PatchCluster
+	err = json.Unmarshal(bytes, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	return &data, nil
+}
+
+// --- below do not work, need fixin
+//
+
 // AddCluster creates a new cluster
 func (s *Client) AddCluster(cluster *Cluster) (*Cluster, error) {
 
@@ -546,3 +592,5 @@ func (s *Client) DeleteCluster(uuid string) error {
 
 	return nil
 }
+
+// ---
