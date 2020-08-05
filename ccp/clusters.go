@@ -208,8 +208,10 @@ func (s *Client) GetClusters() ([]Cluster, error) {
 	}
 
 	// Print out the Println of bytes
-	// fmt.Println(bytes.NewBuffer(bytes).String())
-	fmt.Println(string(bytes))
+	// to debug: uncomment below. Prints JSON payload
+	// fmt.Println(string(bytes))
+
+	// Create an Array of Clusters
 	var data []Cluster
 
 	err = json.Unmarshal(bytes, &data)
@@ -225,106 +227,34 @@ func (s *Client) GetClusterByName(clusterName string) (*Cluster, error) {
 
 	clusters, err := s.GetClusters()
 	if err != nil {
-		fmt.Println(err)
+		// fmt.Println(err)
 		// return Cluster{}, err
-	} else {
-		fmt.Printf("* GetClusterByNameNew: Got %d clusters\n", len(clusters))
+		return nil, err
 	}
+	// else {
+	// 	//	fmt.Printf("* GetClusterByNameNew: Got %d clusters\n", len(clusters))
+	// }
 
 	// fmt.Println("GetClusterByName: Get clustername from loop")
 	// for i := 0; i < len(clusters); i++ {
 	for i, x := range clusters {
-		// fmt.Println("Cluster found from loop: " + *clusters[i].Name)
-		// if string(*clusters[x].Name) == string(clusterName) {
-		// 	fmt.Println("Found matching cluster " + clusterName + " at postion " + string(i))
-		// 	//cluster = *data[i]
-		// 	//cluster = *data[i]
-		// 	return clusters[i], nil
-		// 	//break
-		// }
 		fmt.Printf("Iteration %d\n", i)
 		fmt.Println("Cluster found: " + string(*x.Name) + "\n")
 		if string(clusterName) == string(*x.Name) {
-			fmt.Println("Found matching cluster " + clusterName + " = " + *x.Name)
+			// fmt.Println("Found matching cluster " + clusterName + " = " + *x.Name)
 			return &x, nil
 		}
 	}
 	return nil, errors.New("Cannot find cluster " + clusterName)
 }
 
-// GetCluster is v2 cluster
-// func (s *Client) GetCluster(clusterName string) (*Cluster, error) {
-//
-// 	url := fmt.Sprintf(s.BaseURL + "/2/clusters/" + clusterName)
-//
-// 	req, err := http.NewRequest("GET", url, nil)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	bytes, err := s.doRequest(req)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	var data *Cluster
-//
-// 	err = json.Unmarshal(bytes, &data)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-//
-// 	return data, nil
-// }
-
-// // GetClusterByName doesn't quite work
-// func (s *Client) GetClusterByName(clusterName string) (*Cluster, error) {
-
-// 	// 1) get All Clusters, find cluster that matches clusterName, get UUID
-// 	// 2) get cluster
-// 	// get
-// 	url := s.BaseURL + "/v3/clusters/"
-
-// 	var data []Cluster
-
-// 	req, err := http.NewRequest("GET", url, nil)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	bytes, err := s.doRequest(req)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	err = json.Unmarshal(bytes, &data)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	// loop over &data Cluster struct and find cluster Name
-// 	// return UUID
-// 	//var cluster Cluster
-
-// 	fmt.Println("Get clustername from loop")
-// 	for i := 0; i < len(data); i++ {
-// 		fmt.Println("Cluster found from loop: " + *data[i].Name)
-// 		if string(*data[i].Name) == string(clusterName) {
-// 			fmt.Println("Found matching cluster " + clusterName + " at postion " + string(i))
-// 			//cluster = *data[i]
-// 			//cluster = *data[i]
-// 			return &data[i], nil
-// 			//break
-// 		}
-// 	}
-
-// 	return nil, errors.New("Cannot find cluster")
-// }
-
-// GetCluster v3 cluster -- todo change this to UUID
-func (s *Client) GetCluster(clusterName string) (*Cluster, error) {
+// GetCluster v3 cluster by UUID
+func (s *Client) GetCluster(clusterUUID string) (*Cluster, error) {
 
 	// 1) get All Clusters, find cluster that matches clusterName, get UUID
 	// 2) get cluster
 	// get
-	url := fmt.Sprintf(s.BaseURL + "/v3/clusters/" + clusterName) // I don't think this is working how I want it to
+	url := fmt.Sprintf(s.BaseURL + "/v3/clusters/" + clusterUUID)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -343,50 +273,6 @@ func (s *Client) GetCluster(clusterName string) (*Cluster, error) {
 
 	return data, nil
 }
-
-// func (s *Client) GetClusterHealth(clusterUUID string) (*Cluster, error) {
-
-// 	url := fmt.Sprintf(s.BaseURL + "/2/clusters/" + clusterUUID + "/health")
-
-// 	req, err := http.NewRequest("GET", url, nil)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	bytes, err := s.doRequest(req)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	var data *Cluster
-
-// 	err = json.Unmarshal(bytes, &data)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return data, nil
-// }
-
-// func (s *Client) GetClusterAuthz(clusterUUID string) (*Cluster, error) {
-
-// 	url := fmt.Sprintf(s.BaseURL + "/2/clusters/" + clusterUUID + "/authz")
-
-// 	req, err := http.NewRequest("GET", url, nil)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	bytes, err := s.doRequest(req)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	var data *Cluster
-
-// 	err = json.Unmarshal(bytes, &data)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return data, nil
-// }
 
 // func (s *Client) GetClusterDashboard(clusterUUID string) (*string, error) {
 
@@ -539,12 +425,6 @@ func (s *Client) AddClusterBasic(cluster *Cluster) (*Cluster, error) {
 	if nonzero(cluster.MasterNodePool.SSHKey) {
 		return nil, errors.New("cluster.MasterNodePool.SSHKey is missing")
 	}
-
-	// foobar := cluster.WorkerNodePool
-	// nodepool := &foobar[0].SSHKey
-
-	// nodepool := cluster.WorkerNodePool
-	// fmt.Println(nodepool.Name)
 
 	// loop over array of WorkerNodePool
 	for k, v := range *cluster.WorkerNodePool {

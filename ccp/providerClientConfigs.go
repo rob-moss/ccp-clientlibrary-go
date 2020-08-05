@@ -21,17 +21,17 @@ import (
 	"net/http"
 )
 
+// ProviderClientConfig struct for vSphere. AWS, GKE, AKS not yet made
 type ProviderClientConfig struct {
-	UUID   *string `json:"uuid,omitempty"`
-	Name   *string `json:"name,omitempty" `
-	Type   *int64  `json:"type,omitempty"`
-	Config *Config `json:"config,omitempty"`
-}
-
-type Config struct {
-	IP       *string `json:"ip,omitempty"`
-	Port     *int64  `json:"po	rt,omitempty" `
-	Username *string `json:"username,omitempty"`
+	UUID               *string `json:"id,omitempty"`
+	Type               *string `json:"type,omitempty"`
+	Name               *string `json:"name,omitempty" `
+	Address            *string `json:"address,omitempty" `
+	Port               *int64  `json:"port,omitempty" `
+	Username           *string `json:"username,omitempty" `
+	InsecureSkipVerify *bool   `json:"insecure_skip_verify,omitempty" `
+	// Password may be needed to set up a new Provider
+	// Config *Config `json:"config,omitempty"`
 }
 
 type Vsphere struct {
@@ -43,9 +43,10 @@ type Vsphere struct {
 	Pools       *[]string `json:"Pools,omitempty"`
 }
 
+// GetProviderClientConfigs Get and return All Providers
 func (s *Client) GetProviderClientConfigs() ([]ProviderClientConfig, error) {
 
-	url := fmt.Sprintf(s.BaseURL + "/2/providerclientconfigs")
+	url := fmt.Sprintf(s.BaseURL + "/v3/providers")
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -65,9 +66,10 @@ func (s *Client) GetProviderClientConfigs() ([]ProviderClientConfig, error) {
 	return data, nil
 }
 
+// GetProviderClientConfig by UUID
 func (s *Client) GetProviderClientConfig(clientUUID string) (*ProviderClientConfig, error) {
 
-	url := fmt.Sprintf(s.BaseURL + "/2/providerclientconfigs/" + clientUUID)
+	url := fmt.Sprintf(s.BaseURL + "/v3/providers/" + clientUUID)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -87,156 +89,156 @@ func (s *Client) GetProviderClientConfig(clientUUID string) (*ProviderClientConf
 	return data, nil
 }
 
-func (s *Client) GetProviderClientConfigClusters(clientUUID string) ([]Cluster, error) {
+// func (s *Client) GetProviderClientConfigClusters(clientUUID string) ([]Cluster, error) {
 
-	url := fmt.Sprintf(s.BaseURL + "/2/providerclientconfigs/" + clientUUID + "/clusters")
+// 	url := fmt.Sprintf(s.BaseURL + "/2/providerclientconfigs/" + clientUUID + "/clusters")
 
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	bytes, err := s.doRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	var data []Cluster
+// 	req, err := http.NewRequest("GET", url, nil)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	bytes, err := s.doRequest(req)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	var data []Cluster
 
-	err = json.Unmarshal(bytes, &data)
-	if err != nil {
-		return nil, err
-	}
+// 	err = json.Unmarshal(bytes, &data)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	return data, nil
-}
+// 	return data, nil
+// }
 
-func (s *Client) GetProviderClientConfigVsphereDatacenter(clientUUID string) (*Vsphere, error) {
+// func (s *Client) GetProviderClientConfigVsphereDatacenter(clientUUID string) (*Vsphere, error) {
 
-	url := fmt.Sprintf(s.BaseURL + "/2/providerclientconfigs/" + clientUUID + "/vsphere/datacenter")
+// 	url := fmt.Sprintf(s.BaseURL + "/2/providerclientconfigs/" + clientUUID + "/vsphere/datacenter")
 
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	bytes, err := s.doRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	var data *Vsphere
+// 	req, err := http.NewRequest("GET", url, nil)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	bytes, err := s.doRequest(req)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	var data *Vsphere
 
-	err = json.Unmarshal(bytes, &data)
-	if err != nil {
-		return nil, err
-	}
+// 	err = json.Unmarshal(bytes, &data)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	return data, nil
-}
+// 	return data, nil
+// }
 
-func (s *Client) GetProviderClientConfigVsphereDatacenterClusters(clientUUID string, datacenter string) (*Vsphere, error) {
+// func (s *Client) GetProviderClientConfigVsphereDatacenterClusters(clientUUID string, datacenter string) (*Vsphere, error) {
 
-	url := fmt.Sprintf(s.BaseURL + "/2/providerclientconfigs/" + clientUUID + "/vsphere/datacenter/" + datacenter + "/cluster")
+// 	url := fmt.Sprintf(s.BaseURL + "/2/providerclientconfigs/" + clientUUID + "/vsphere/datacenter/" + datacenter + "/cluster")
 
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	bytes, err := s.doRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	var data *Vsphere
+// 	req, err := http.NewRequest("GET", url, nil)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	bytes, err := s.doRequest(req)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	var data *Vsphere
 
-	err = json.Unmarshal(bytes, &data)
-	if err != nil {
-		return nil, err
-	}
+// 	err = json.Unmarshal(bytes, &data)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	return data, nil
-}
+// 	return data, nil
+// }
 
-func (s *Client) GetProviderClientConfigVsphereDatacenterVMs(clientUUID string, datacenter string) (*Vsphere, error) {
+// func (s *Client) GetProviderClientConfigVsphereDatacenterVMs(clientUUID string, datacenter string) (*Vsphere, error) {
 
-	url := fmt.Sprintf(s.BaseURL + "/2/providerclientconfigs/" + clientUUID + "/vsphere/datacenter/" + datacenter + "/vm")
+// 	url := fmt.Sprintf(s.BaseURL + "/2/providerclientconfigs/" + clientUUID + "/vsphere/datacenter/" + datacenter + "/vm")
 
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	bytes, err := s.doRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	var data *Vsphere
+// 	req, err := http.NewRequest("GET", url, nil)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	bytes, err := s.doRequest(req)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	var data *Vsphere
 
-	err = json.Unmarshal(bytes, &data)
-	if err != nil {
-		return nil, err
-	}
+// 	err = json.Unmarshal(bytes, &data)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	return data, nil
-}
+// 	return data, nil
+// }
 
-func (s *Client) GetProviderClientConfigVsphereDatacenterNetworks(clientUUID string, datacenter string) (*Vsphere, error) {
+// func (s *Client) GetProviderClientConfigVsphereDatacenterNetworks(clientUUID string, datacenter string) (*Vsphere, error) {
 
-	url := fmt.Sprintf(s.BaseURL + "/2/providerclientconfigs/" + clientUUID + "/vsphere/datacenter/" + datacenter + "/network")
+// 	url := fmt.Sprintf(s.BaseURL + "/2/providerclientconfigs/" + clientUUID + "/vsphere/datacenter/" + datacenter + "/network")
 
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	bytes, err := s.doRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	var data *Vsphere
+// 	req, err := http.NewRequest("GET", url, nil)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	bytes, err := s.doRequest(req)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	var data *Vsphere
 
-	err = json.Unmarshal(bytes, &data)
-	if err != nil {
-		return nil, err
-	}
+// 	err = json.Unmarshal(bytes, &data)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	return data, nil
-}
+// 	return data, nil
+// }
 
-func (s *Client) GetProviderClientConfigVsphereDatacenterDatastores(clientUUID string, datacenter string) (*Vsphere, error) {
+// func (s *Client) GetProviderClientConfigVsphereDatacenterDatastores(clientUUID string, datacenter string) (*Vsphere, error) {
 
-	url := fmt.Sprintf(s.BaseURL + "/2/providerclientconfigs/" + clientUUID + "/vsphere/datacenter/" + datacenter + "/datastore")
+// 	url := fmt.Sprintf(s.BaseURL + "/2/providerclientconfigs/" + clientUUID + "/vsphere/datacenter/" + datacenter + "/datastore")
 
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	bytes, err := s.doRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	var data *Vsphere
+// 	req, err := http.NewRequest("GET", url, nil)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	bytes, err := s.doRequest(req)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	var data *Vsphere
 
-	err = json.Unmarshal(bytes, &data)
-	if err != nil {
-		return nil, err
-	}
+// 	err = json.Unmarshal(bytes, &data)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	return data, nil
-}
+// 	return data, nil
+// }
 
-func (s *Client) GetProviderClientConfigVsphereDatacenterClusterPools(clientUUID string, datacenter string, cluster string) (*Vsphere, error) {
+// func (s *Client) GetProviderClientConfigVsphereDatacenterClusterPools(clientUUID string, datacenter string, cluster string) (*Vsphere, error) {
 
-	url := fmt.Sprintf(s.BaseURL + "/2/providerclientconfigs/" + clientUUID + "/vsphere/datacenter/" + datacenter + "/cluster/" + cluster + "/pool")
+// 	url := fmt.Sprintf(s.BaseURL + "/2/providerclientconfigs/" + clientUUID + "/vsphere/datacenter/" + datacenter + "/cluster/" + cluster + "/pool")
 
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	bytes, err := s.doRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	var data *Vsphere
+// 	req, err := http.NewRequest("GET", url, nil)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	bytes, err := s.doRequest(req)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	var data *Vsphere
 
-	err = json.Unmarshal(bytes, &data)
-	if err != nil {
-		return nil, err
-	}
+// 	err = json.Unmarshal(bytes, &data)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	return data, nil
-}
+// 	return data, nil
+// }
