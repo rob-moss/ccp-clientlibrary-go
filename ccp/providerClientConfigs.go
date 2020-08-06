@@ -35,15 +35,14 @@ type ProviderClientConfig struct {
 	// Config *Config `json:"config,omitempty"`
 }
 
-// Vsphere struct
-type Vsphere struct {
-	Datacenters *[]string `json:"Datacenters,omitempty"`
-	Clusters    *[]string `json:"Clusters,omitempty"`
-	VMs         *[]string `json:"VMs,omitempty"`
-	Networks    *[]string `json:"Networks,omitempty"`
-	Datastores  *[]string `json:"Datastores,omitempty"`
-	Pools       *[]string `json:"Pools,omitempty"`
-}
+// // Vsphere struct: now in clusters.go
+// type Vsphere struct {
+// 	Datacenter *string   `json:"datacenter,omitempty"`
+// 	Datastore  *string   `json:"datastore,omitempty"`
+// 	Networks   *[]string `json:"networks,omitempty"`
+// 	Cluster    *string   `json:"clusters,omitempty"`
+// 	Pools      *string   `json:"resource_pool,omitempty"`
+// }
 
 // NetworkProviderSubnet struct
 type NetworkProviderSubnet struct {
@@ -71,7 +70,7 @@ func (s *Client) GetNetworkProviderSubnetByName(networkProviderName string) (*Ne
 	// var x is each singular networkProviderSubnets struct
 	for _, x := range networkProviderSubnets {
 		if networkProviderName == string(*x.Name) {
-			fmt.Println("Found matching network provider " + *x.Name)
+			Debug(2, "Found matching network provider "+*x.Name)
 			return &x, nil
 		}
 	}
@@ -130,7 +129,7 @@ func (s *Client) GetInfraProviders() ([]ProviderClientConfig, error) {
 // GetInfraProviderByUUID by UUID
 func (s *Client) GetInfraProviderByUUID(providerUUID string) (*ProviderClientConfig, error) {
 
-	url := fmt.Sprintf(s.BaseURL + "/v3/providers/" + providerUUID)
+	url := s.BaseURL + "/v3/providers/" + providerUUID
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -147,6 +146,8 @@ func (s *Client) GetInfraProviderByUUID(providerUUID string) (*ProviderClientCon
 		return nil, err
 	}
 
+	Debug(2, "Found matching Infra provider "+*data.Name)
+
 	return data, nil
 }
 
@@ -162,10 +163,10 @@ func (s *Client) GetInfraProviderByName(providerName string) (*ProviderClientCon
 	// var x is each singular networkProviderSubnets struct
 	for _, x := range providers {
 		if providerName == string(*x.Name) {
-			fmt.Println("Found matching network provider " + *x.Name)
+			Debug(2, "Found matching Infra provider "+*x.Name)
 			return &x, nil
 		}
 	}
 
-	return nil, errors.New("Network provider " + providerName + " not found")
+	return nil, errors.New("Infra provider " + providerName + " not found")
 }

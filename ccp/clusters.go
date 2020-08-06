@@ -20,7 +20,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"strconv"
 
 	validator "gopkg.in/validator.v2"
 )
@@ -52,39 +54,39 @@ v2 todo
 type Cluster struct {
 	//  Cluster Variable Name in Struct
 	//								Go Type			Reference in JSON
-	UUID                     *string               `json:"id,omitempty"` //
-	Type                     *string               `json:"type,omitempty"  `
-	Name                     *string               `json:"name,omitempty"  validate:"nonzero"`
-	ProviderClientConfigUUID *string               `json:"provider,omitempty" `
-	Status                   *string               `json:"status,omitempty" `
-	KubernetesVersion        *string               `json:"kubernetes_version,omitempty" validate:"nonzero"`
-	KubeConfig               *string               `json:"kubeconfig,omitempty" validate:"nonzero"`
-	IPAllocationMethod       *string               `json:"ip_allocation_method,omitempty" validate:"nonzero"`
-	MasterVIP                *string               `json:"master_vip,omitempty"`
-	LoadBalancerIPNum        *int64                `json:"load_balancer_ip_num,omitempty"`
-	SubnetID                 *string               `json:"subnet_id,omitempty"`
-	NTPPools                 *[]string             `json:"ntp_pools,omitempty"`
-	NTPServers               *[]string             `json:"ntp_servers,omitempty"`
-	RegistriesRootCA         *[]string             `json:"root_ca_registries,omitempty"`
-	RegistriesSelfSigned     *RegistriesSelfSigned `json:"self_signed_registries,omitempty"`
-	RegistriesInsecure       *[]string             `json:"insecure_registries,omitempty"`
-	DockerProxyHTTP          *string               `json:"docker_http_proxy,omitempty"`
-	DockerProxyHTTPS         *string               `json:"docker_https_proxy,omitempty"`
-	DockerBIP                *string               `json:"docker_bip,omitempty"`
-	Infra                    *Infra                `json:"vsphere_,omitempty"  validate:"nonzero" `
-	MasterNodePool           *MasterNodePool       `json:"master_group,omitempty"  validate:"nonzero" `
-	WorkerNodePool           *[]WorkerNodePool     `json:"node_groups,omitempty"  validate:"nonzero" `
-	NetworkPlugin            *NetworkPlugin        `json:"network_plugin_profile,omitempty" validate:"nonzero"`
-	IngressAsLB              *bool                 `json:"ingress_as_lb,omitempty"`
-	NginxIngressClass        *string               `json:"nginx_ingress_class,omitempty"`
-	ETCDEncrypted            *bool                 `json:"etcd_encrypted,omitempty"`
-	SkipManagement           *bool                 `json:"skip_management,omitempty"`
-	DockerNoProxy            *[]string             `json:"docker_no_proxy,omitempty"`
-	RoutableCIDR             *string               `json:"routable_cidr,omitempty"`
-	ImagePrefix              *string               `json:"image_prefix,omitempty"`
-	ACIProfileUUID           *string               `json:"aci_profile,omitempty"`
-	Description              *string               `json:"description,omitempty"`
-	AWSIamEnabled            *string               `json:"aws_iam_enabled,omitempty"`
+	UUID                 *string               `json:"id,omitempty"` //
+	Type                 *string               `json:"type,omitempty"  `
+	Name                 *string               `json:"name,omitempty"  validate:"nonzero"`
+	InfraProviderUUID    *string               `json:"provider,omitempty" `
+	Status               *string               `json:"status,omitempty" `
+	KubernetesVersion    *string               `json:"kubernetes_version,omitempty" validate:"nonzero"`
+	KubeConfig           *string               `json:"kubeconfig,omitempty"`
+	IPAllocationMethod   *string               `json:"ip_allocation_method,omitempty" validate:"nonzero"`
+	MasterVIP            *string               `json:"master_vip,omitempty"`
+	LoadBalancerIPNum    *int64                `json:"load_balancer_num,omitempty"  validate:"nonzero"`
+	SubnetUUID           *string               `json:"subnet_id,omitempty"`
+	NTPPools             *[]string             `json:"ntp_pools,omitempty"`
+	NTPServers           *[]string             `json:"ntp_servers,omitempty"`
+	RegistriesRootCA     *[]string             `json:"root_ca_registries,omitempty"`
+	RegistriesSelfSigned *RegistriesSelfSigned `json:"self_signed_registries,omitempty"`
+	RegistriesInsecure   *[]string             `json:"insecure_registries,omitempty"`
+	DockerProxyHTTP      *string               `json:"docker_http_proxy,omitempty"`
+	DockerProxyHTTPS     *string               `json:"docker_https_proxy,omitempty"`
+	DockerBIP            *string               `json:"docker_bip,omitempty"`
+	Infra                *Infra                `json:"vsphere_infra,omitempty"  validate:"nonzero"`
+	MasterNodePool       *MasterNodePool       `json:"master_group,omitempty"  validate:"nonzero" `
+	WorkerNodePool       *[]WorkerNodePool     `json:"node_groups,omitempty"  validate:"nonzero" `
+	NetworkPlugin        *NetworkPlugin        `json:"network_plugin_profile,omitempty" validate:"nonzero"`
+	IngressAsLB          *bool                 `json:"ingress_as_lb,omitempty"`
+	NginxIngressClass    *string               `json:"nginx_ingress_class,omitempty"`
+	ETCDEncrypted        *bool                 `json:"etcd_encrypted,omitempty"`
+	SkipManagement       *bool                 `json:"skip_management,omitempty"`
+	DockerNoProxy        *[]string             `json:"docker_no_proxy,omitempty"`
+	RoutableCIDR         *string               `json:"routable_cidr,omitempty"`
+	ImagePrefix          *string               `json:"image_prefix,omitempty"`
+	ACIProfileUUID       *string               `json:"aci_profile,omitempty"`
+	Description          *string               `json:"description,omitempty"`
+	AWSIamEnabled        *bool                 `json:"aws_iam_enabled,omitempty"`
 }
 
 // WorkerNodePool are the worker nodes - updated for v3
@@ -101,7 +103,7 @@ type WorkerNodePool struct {
 	KubernetesVersion *string   `json:"kubernetes_version,omitempty"`           //v3
 }
 
-// RegistriesSelfSigned comment
+// RegistriesSelfSigned v3
 type RegistriesSelfSigned struct {
 	Cert *string `json:"selfsignedca,omitempty" `
 }
@@ -112,7 +114,7 @@ type Infra struct { // checked for v3
 	Datastore    *string   `json:"datastore,omitempty"  validate:"nonzero"`
 	Cluster      *string   `json:"cluster,omitempty" validate:"nonzero"`
 	Networks     *[]string `json:"networks,omitempty"  validate:"nonzero"`
-	ResourcePool *string   `json:"resource_pool,omitempty"  validate:"nonzero"`
+	ResourcePool *string   `json:"resource_pool,omitempty"`
 }
 
 // MasterNodePool updated for v3
@@ -195,6 +197,7 @@ type VsphereClientConfig struct {
 
 // GetClusters function for v3
 func (s *Client) GetClusters() ([]Cluster, error) {
+	Debug(3, "GetClusters")
 
 	url := s.BaseURL + "/v3/clusters"
 
@@ -210,6 +213,7 @@ func (s *Client) GetClusters() ([]Cluster, error) {
 	// Print out the Println of bytes
 	// to debug: uncomment below. Prints JSON payload
 	// fmt.Println(string(bytes))
+	Debug(3, "Cluster JSON Payload:\n"+string(bytes))
 
 	// Create an Array of Clusters
 	var data []Cluster
@@ -219,41 +223,43 @@ func (s *Client) GetClusters() ([]Cluster, error) {
 		return nil, err
 	}
 
+	// Print out list of Clusters and their index
+	Debug(2, "Found "+strconv.Itoa(len(data))+" clusters")
+	for i, cl := range data {
+		Debug(2, "Found cluster "+strconv.Itoa(i)+" named "+*cl.Name+" with UUID "+*cl.UUID)
+	}
+
 	return data, nil
 }
 
 // GetClusterByName get all clusters, iterate through to find slice matching clusterName
 func (s *Client) GetClusterByName(clusterName string) (*Cluster, error) {
 
+	Debug(3, "GetClusterByName")
 	clusters, err := s.GetClusters()
 	if err != nil {
-		// fmt.Println(err)
-		// return Cluster{}, err
 		return nil, err
 	}
-	// else {
-	// 	//	fmt.Printf("* GetClusterByNameNew: Got %d clusters\n", len(clusters))
-	// }
 
-	// fmt.Println("GetClusterByName: Get clustername from loop")
-	// for i := 0; i < len(clusters); i++ {
 	for i, x := range clusters {
-		fmt.Printf("Iteration %d\n", i)
-		fmt.Println("Cluster found: " + string(*x.Name) + "\n")
+		Debug(3, "Iteration "+strconv.Itoa(i)+"Cluster found: "+string(*x.Name)+"\n")
 		if string(clusterName) == string(*x.Name) {
-			// fmt.Println("Found matching cluster " + clusterName + " = " + *x.Name)
+			Debug(2, "Found matching cluster "+clusterName+" = "+*x.Name)
 			return &x, nil
 		}
 	}
 	return nil, errors.New("Cannot find cluster " + clusterName)
 }
 
-// GetCluster v3 cluster by UUID
-func (s *Client) GetCluster(clusterUUID string) (*Cluster, error) {
+// // GetClusterByUUID alias for GetCluster
+// func (s *Client) GetClusterByUUID(clusterUUID string) (*Cluster, error) {
+// 	return GetCluster(clusterUUID)
+// }
 
-	// 1) get All Clusters, find cluster that matches clusterName, get UUID
-	// 2) get cluster
-	// get
+// GetClusterByUUID v3 cluster by UUID
+func (s *Client) GetClusterByUUID(clusterUUID string) (*Cluster, error) {
+	Debug(3, "GetClusterByUUID")
+
 	url := fmt.Sprintf(s.BaseURL + "/v3/clusters/" + clusterUUID)
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -274,7 +280,7 @@ func (s *Client) GetCluster(clusterUUID string) (*Cluster, error) {
 	return data, nil
 }
 
-// patchCluster spec for JSON scale
+// PatchCluster spec for JSON scale
 type PatchCluster struct {
 	Name *string `json:"name" validate:"nonzero"`
 	Size *int64  `json:"size" validate:"nonzero"`
@@ -283,8 +289,9 @@ type PatchCluster struct {
 // ScaleCluster scales an existing cluster
 func (s *Client) ScaleCluster(clusterUUID, workerPoolName string, size int64) (*PatchCluster, error) {
 
+	Debug(1, "Func: ScaleCluster")
 	url := s.BaseURL + "/v3/clusters/" + clusterUUID + "/node-pools/" + workerPoolName + "/"
-	fmt.Println("URL: " + url)
+	Debug(2, "PATCH URL: "+url)
 
 	cluserScale := PatchCluster{
 		Name: String(workerPoolName),
@@ -295,8 +302,7 @@ func (s *Client) ScaleCluster(clusterUUID, workerPoolName string, size int64) (*
 		return nil, err
 	}
 
-	fmt.Println("Sending JSON patch:")
-	fmt.Println(string(j))
+	Debug(3, "Sending JSON patch: "+string(j))
 
 	req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(j))
 	if err != nil {
@@ -320,45 +326,110 @@ func (s *Client) ScaleCluster(clusterUUID, workerPoolName string, size int64) (*
 // --- below do not work, need fixin
 //
 
-// AddCluster creates a new cluster
-func (s *Client) AddCluster(cluster *Cluster) (*Cluster, error) {
+// ConvertJSONToCluster convers JSON
+func (s *Client) ConvertJSONToCluster(jsonFile string) (*Cluster, error) {
+	Debug(1, "Entered ConvertJSONToCluster")
 
-	var data Cluster
-
-	if errs := validator.Validate(cluster); errs != nil {
-		return nil, errs
-	}
-
-	url := fmt.Sprintf(s.BaseURL + "/v3/clusters")
-
-	j, err := json.Marshal(cluster)
-
+	// Debug(2, "Cluster Struct for cluster named "+string(*cluster.Name))
+	jsonBody, err := ioutil.ReadFile(jsonFile)
 	if err != nil {
-
+		fmt.Println(err)
 		return nil, err
 	}
 
+	var newCluster Cluster
+	err = json.Unmarshal([]byte(jsonBody), &newCluster)
+	if err != nil {
+		fmt.Println("error:", err)
+	} else {
+		fmt.Println("Success")
+	}
+	fmt.Printf("Struct: %+v\n", newCluster)
+
+	return &newCluster, nil
+}
+
+// AddCluster creates a new cluster
+func (s *Client) AddCluster(cluster *Cluster) (*Cluster, error) {
+	Debug(1, "AddCluster for "+string(*cluster.Name))
+
+	Debug(2, "Start validating Cluster struct")
+	errs := validator.Validate(cluster)
+	if errs != nil {
+		Debug(1, "Errors validating Cluster struct with validator.Validate(): "+string(errs.Error()))
+		return nil, errs
+	} else {
+		Debug(3, "No Errors validating Cluster struct")
+	}
+
+	url := s.BaseURL + "/v3/clusters/"
+
+	j, err := json.Marshal(cluster)
+	if err != nil {
+		Debug(1, "Errors marshaling with json.Marshal(): "+string(err.Error()))
+		return nil, err
+	} else {
+		Debug(3, "No errors Marshaling JSON")
+	}
+
+	Debug(2, "About to POST to url "+url)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(j))
 	if err != nil {
+		Debug(1, "Errors POSTing with http.NewRequest: "+string(err.Error()))
 		return nil, err
 	}
 
 	bytes, err := s.doRequest(req)
-
 	if err != nil {
+		Debug(1, "Errors POSTing with s.doRequest: "+string(err.Error()))
+		Debug(1, "POST response: "+string(bytes))
 		return nil, err
 	}
+	Debug(3, "POST response: "+string(bytes))
 
+	var data Cluster
+
+	// err = json.Unmarshal(bytes, &data)
+	Debug(2, "Unmarshaling response")
 	err = json.Unmarshal(bytes, &data)
-
 	if err != nil {
+		Debug(1, "Errors unmarshaling with json.Unmarshal: "+string(err.Error()))
 		return nil, err
+	} else {
+		Debug(2, "Unmarshaled response successfully")
 	}
 
-	cluster = &data
-
-	return cluster, nil
+	Debug(2, "CCP API responded with JSON payload for cluster named "+*data.Name+" with UUID "+*data.UUID)
+	if *data.UUID == "" {
+		Debug(1, "CCP API created cluster named "+*data.Name+" with UUID "+*data.UUID)
+	}
+	return &data, nil
 }
+
+// DeleteCluster deletes a cluster
+func (s *Client) DeleteCluster(clusterUUID string) error {
+	Debug(2, "Entered DeleteCluster for UUID "+clusterUUID)
+
+	if clusterUUID == "" {
+		return errors.New("Cluster UUID to delete is required")
+	}
+
+	url := s.BaseURL + "/v3/clusters/" + clusterUUID + "/"
+
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return err
+	}
+	_, err = s.doRequest(req)
+	if err != nil {
+		return err
+	}
+
+	Debug(2, "Request sent to API with no error response")
+	return nil
+}
+
+// Not working?
 
 // AddClusterBasic add a v3 cluster the easy way
 func (s *Client) AddClusterBasic(cluster *Cluster) (*Cluster, error) {
@@ -484,7 +555,7 @@ func (s *Client) AddClusterBasic(cluster *Cluster) (*Cluster, error) {
 	}
 
 	// Since it returns a list we will use the UUID from the first element
-	cluster.ProviderClientConfigUUID = String(*providerClientConfigs.UUID)
+	cluster.InfraProviderUUID = String(*providerClientConfigs.UUID)
 	cluster.KubernetesVersion = String("1.16.3") // todo: fetch this somehow
 	// cluster.Type = Int64(1)
 	cluster.NetworkPlugin = &networkPlugin
@@ -530,67 +601,44 @@ func (s *Client) AddClusterBasic(cluster *Cluster) (*Cluster, error) {
 	return cluster, nil
 }
 
-// PatchCluster does the things
-func (s *Client) PatchCluster(cluster *Cluster) (*Cluster, error) {
+// // PatchCluster does the things
+// func (s *Client) PatchCluster(cluster *Cluster) (*Cluster, error) {
 
-	var data Cluster
+// 	var data Cluster
 
-	if nonzero(cluster.UUID) {
-		return nil, errors.New("Cluster.UUID is missing")
-	}
+// 	if nonzero(cluster.UUID) {
+// 		return nil, errors.New("Cluster.UUID is missing")
+// 	}
 
-	clusterUUID := *cluster.UUID
+// 	clusterUUID := *cluster.UUID
 
-	url := fmt.Sprintf(s.BaseURL + "/v3/clusters/" + clusterUUID)
+// 	url := fmt.Sprintf(s.BaseURL + "/v3/clusters/" + clusterUUID)
 
-	j, err := json.Marshal(cluster)
+// 	j, err := json.Marshal(cluster)
 
-	if err != nil {
+// 	if err != nil {
 
-		return nil, err
-	}
+// 		return nil, err
+// 	}
 
-	req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(j))
-	if err != nil {
-		return nil, err
-	}
+// 	req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(j))
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	bytes, err := s.doRequest(req)
+// 	bytes, err := s.doRequest(req)
 
-	if err != nil {
-		return nil, err
-	}
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	err = json.Unmarshal(bytes, &data)
+// 	err = json.Unmarshal(bytes, &data)
 
-	if err != nil {
-		return nil, err
-	}
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	cluster = &data
+// 	cluster = &data
 
-	return cluster, nil
-}
-
-// DeleteCluster deletes a cluster
-func (s *Client) DeleteCluster(uuid string) error {
-
-	if uuid == "" {
-		return errors.New("Cluster UUID to delete is required")
-	}
-
-	url := fmt.Sprintf(s.BaseURL + "/v3/clusters/" + uuid)
-
-	req, err := http.NewRequest("DELETE", url, nil)
-	if err != nil {
-		return err
-	}
-	_, err = s.doRequest(req)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// ---
+// 	return cluster, nil
+// }

@@ -19,37 +19,35 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
 	"net/http"
 )
 
-type LivenessHealth struct {
-	CXVersion      *string `json:"CXVersion,omitempty"`
-	TimeOnMgmtHost *string `json:"TimeOnMgmtHost,omitempty"`
-}
+// type LivenessHealth struct {
+// 	CXVersion      *string `json:"CXVersion,omitempty"`
+// 	TimeOnMgmtHost *string `json:"TimeOnMgmtHost,omitempty"`
+// }
 
-type Health struct {
-	TotalSystemHealth *string          `json:"TotalSystemHealth,omitempty"`
-	CurrentNodes      *int64           `json:"CurrentNodes,omitempty"`
-	ExpectedNodes     *int64           `json:"ExpectedNodes,omitempty"`
-	NodesStatus       *[]NodeStatus    `json:"NodesStatus,omitempty"`
-	PodStatusList     *[]PodStatusList `json:"PodStatusList,omitempty"`
-}
+// type Health struct {
+// 	TotalSystemHealth *string          `json:"TotalSystemHealth,omitempty"`
+// 	CurrentNodes      *int64           `json:"CurrentNodes,omitempty"`
+// 	ExpectedNodes     *int64           `json:"ExpectedNodes,omitempty"`
+// 	NodesStatus       *[]NodeStatus    `json:"NodesStatus,omitempty"`
+// 	PodStatusList     *[]PodStatusList `json:"PodStatusList,omitempty"`
+// }
 
-type NodeStatus struct {
-	NodeName           *string `json:"NodeName,omitempty"`
-	NodeCondition      *string `json:"NodeCondition,omitempty"`
-	NodeStatus         *string `json:"NodeStatus,omitempty"`
-	LastTransitionTime *string `json:"LastTransitionTime,omitempty"`
-}
+// type NodeStatus struct {
+// 	NodeName           *string `json:"NodeName,omitempty"`
+// 	NodeCondition      *string `json:"NodeCondition,omitempty"`
+// 	NodeStatus         *string `json:"NodeStatus,omitempty"`
+// 	LastTransitionTime *string `json:"LastTransitionTime,omitempty"`
+// }
 
-type PodStatusList struct {
-	PodName            *string `json:"PodName,omitempty"`
-	PodCondition       *string `json:"PodCondition,omitempty"`
-	PodStatus          *string `json:"PodStatus,omitempty"`
-	LastTransitionTime *string `json:"LastTransitionTime,omitempty"`
-}
+// type PodStatusList struct {
+// 	PodName            *string `json:"PodName,omitempty"`
+// 	PodCondition       *string `json:"PodCondition,omitempty"`
+// 	PodStatus          *string `json:"PodStatus,omitempty"`
+// 	LastTransitionTime *string `json:"LastTransitionTime,omitempty"`
+// }
 
 // Login for v2
 // func (s *Client) Login(client *Client) error {
@@ -143,140 +141,102 @@ func (s *Client) Login(client *Client) error {
 	// Send the JSON payload
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(j))
 	if err != nil {
+		Debug(1, "Error logging in: "+err.Error())
 		return err
 	}
 	req.Header.Add("Content-Type", "application/json")
 
-	// this won't work for v3 - we need to capture some headers
-	// _, err = s.doRequest(req)
-
-	// req.Header.Add("Content-Type", "application/json")
-	// // req.SetBasicAuth(s.Username, s.Password)
-	// tr := &http.Transport{
-	// 	// below needed to use Proxy from environment
-	// 	Proxy: http.ProxyFromEnvironment,
-	// 	// TLS checking disabled as most CCP instances use self-signed certs
-	// 	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	// }
-	// s.Client{Transport: tr, Jar: jar}
-	// // tr.Proxy{}
-	// http = &http.Client{Transport: tr, Jar: jar}
-
 	resp, err := cl.Do(req)
-	// fmt.Printf("xauth: " + resp)
-	fmt.Println("Response: \n")
-	fmt.Println(resp)
+	// if err != nil {
+	// 	Debug(1, "Error logging in: "+err.Error())
+	// 	// Debug(1, "Response: "+ioutil.ReadAll(resp.Body))
+	// 	return err
+	// } else {
+	// 	Debug(1, "Logged in as user "+client.Username)
+	// }
 
-	fmt.Println("Geting X-Auth-Token")
-
-	// get the X-Auth-Token
-	// X-Auth-Token
+	if err == nil {
+		Debug(1, "Logged in as user "+client.Username)
+	} else {
+		Debug(1, "Error logging in: "+err.Error())
+		// Debug(1, "Response: "+ioutil.ReadAll(resp.Body))
+		return err
+	}
+	// fmt.Println("Response: \n")
+	// fmt.Println(resp)
+	// fmt.Println("Geting X-Auth-Token")
 
 	var xauthtoken = resp.Header.Get("X-Auth-Token")
-	fmt.Println("X-Auth-Token = " + xauthtoken)
-
+	Debug(1, "X-Auth-Token = "+xauthtoken)
 	// set xauth
 	s.XAuthToken = xauthtoken
 
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
+	// if err != nil {
+	// 	return err
+	// }
 
-	bodystring := string(body)
-	fmt.Println("Body: \n")
-	fmt.Println(bodystring)
+	// // debug
+	// body, err := ioutil.ReadAll(resp.Body)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// // debug
+	// bodystring := string(body)
+	// fmt.Println("Body: \n")
+	// fmt.Println(bodystring)
 
 	// fmt.Printf("xauth: " + xauthtoken + " csrf: " + csrftoken + "\n")
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
 
-// func (s *Client) doRequest(req *http.Request) ([]byte, error) {
-//
-// 	var client *http.Client
-//
-// 	req.Header.Add("Content-Type", "application/json")
-// 	//req.SetBasicAuth(s.Username, s.Password)
-// 	tr := &http.Transport{
-// 		// below needed to use Proxy from environment
-// 		Proxy: http.ProxyFromEnvironment,
-// 		// TLS checking disabled as most CCP instances use self-signed certs
-// 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-// 	}
-// 	client = &http.Client{Transport: tr, Jar: jar}
-//
-// 	resp, err := client.Do(req)
-//
+// // GetLivenessHealth foobar
+// func (s *Client) GetLivenessHealth() (*LivenessHealth, error) {
+
+// 	url := fmt.Sprintf(s.BaseURL + "/2/system/livenessHealth")
+
+// 	req, err := http.NewRequest("GET", url, nil)
 // 	if err != nil {
 // 		return nil, err
 // 	}
-// 	defer resp.Body.Close()
-// 	body, err := ioutil.ReadAll(resp.Body)
+// 	bytes, err := s.doRequest(req)
 // 	if err != nil {
 // 		return nil, err
 // 	}
-//
-// 	if 200 != resp.StatusCode && 201 != resp.StatusCode && 202 != resp.StatusCode && 204 != resp.StatusCode {
-// 		return nil, fmt.Errorf("%s", body)
-// 	}
-//
+// 	var data LivenessHealth
+
+// 	err = json.Unmarshal(bytes, &data)
 // 	if err != nil {
 // 		return nil, err
 // 	}
-//
-// 	return body, nil
+
+// 	health := &data
+
+// 	return health, nil
 // }
 
-// GetLivenessHealth foobar
-func (s *Client) GetLivenessHealth() (*LivenessHealth, error) {
+// func (s *Client) GetHealth() (*Health, error) {
 
-	url := fmt.Sprintf(s.BaseURL + "/2/system/livenessHealth")
+// 	url := fmt.Sprintf(s.BaseURL + "/2/system/health")
 
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	bytes, err := s.doRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	var data LivenessHealth
+// 	req, err := http.NewRequest("GET", url, nil)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	bytes, err := s.doRequest(req)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	var data Health
 
-	err = json.Unmarshal(bytes, &data)
-	if err != nil {
-		return nil, err
-	}
+// 	err = json.Unmarshal(bytes, &data)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	health := &data
+// 	health := &data
 
-	return health, nil
-}
-
-func (s *Client) GetHealth() (*Health, error) {
-
-	url := fmt.Sprintf(s.BaseURL + "/2/system/health")
-
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	bytes, err := s.doRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	var data Health
-
-	err = json.Unmarshal(bytes, &data)
-	if err != nil {
-		return nil, err
-	}
-
-	health := &data
-
-	return health, nil
-}
+// 	return health, nil
+// }
