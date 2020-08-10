@@ -23,22 +23,23 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"time"
 
 	validator "gopkg.in/validator.v2"
 )
 
 /* toDo
-- Create JSON config
-- Make connection to CCP CP via Proxy (optional)
-- Set defaults: image, sshkey, sshuser, provider, network
-- Log in to CCP using X-Auth-Token
+- Create JSON config: done
+- Make connection to CCP CP via Proxy (optional): done
+- Set defaults: image, sshkey, sshuser, provider, network: done
+- Log in to CCP using X-Auth-Token: done
 - Create functions to:
 -- Get kubernetes version for deployments
--- Fetch provider by name -> uuid
--- Fetch subnet by name -> uuid
--- Create Cluster (Calico, vSphere)
--- Scale Cluster (Worker nodes)
--- Delete Cluster
+-- Fetch provider by name -> uuid: done
+-- Fetch subnet by name -> uuid: done
+-- Create Cluster (Calico, vSphere): done
+-- Scale Cluster (Worker nodes): done
+-- Delete Cluster: done
 
 v2 todo
 - Create functions to:
@@ -197,7 +198,7 @@ type VsphereClientConfig struct {
 
 // GetClusters function for v3
 func (s *Client) GetClusters() ([]Cluster, error) {
-	Debug(3, "GetClusters")
+	Debug(1, "GetClusters")
 
 	url := s.BaseURL + "/v3/clusters"
 
@@ -234,15 +235,15 @@ func (s *Client) GetClusters() ([]Cluster, error) {
 
 // GetClusterByName get all clusters, iterate through to find slice matching clusterName
 func (s *Client) GetClusterByName(clusterName string) (*Cluster, error) {
+	Debug(1, "GetClusterByName")
 
-	Debug(3, "GetClusterByName")
 	clusters, err := s.GetClusters()
 	if err != nil {
 		return nil, err
 	}
 
 	for i, x := range clusters {
-		Debug(3, "Iteration "+strconv.Itoa(i)+"Cluster found: "+string(*x.Name)+"\n")
+		Debug(3, "Iteration "+strconv.Itoa(i)+" Cluster found: "+string(*x.Name)+"\n")
 		if string(clusterName) == string(*x.Name) {
 			Debug(2, "Found matching cluster "+clusterName+" = "+*x.Name)
 			return &x, nil
@@ -251,14 +252,9 @@ func (s *Client) GetClusterByName(clusterName string) (*Cluster, error) {
 	return nil, errors.New("Cannot find cluster " + clusterName)
 }
 
-// // GetClusterByUUID alias for GetCluster
-// func (s *Client) GetClusterByUUID(clusterUUID string) (*Cluster, error) {
-// 	return GetCluster(clusterUUID)
-// }
-
 // GetClusterByUUID v3 cluster by UUID
 func (s *Client) GetClusterByUUID(clusterUUID string) (*Cluster, error) {
-	Debug(3, "GetClusterByUUID")
+	Debug(1, "GetClusterByUUID")
 
 	url := fmt.Sprintf(s.BaseURL + "/v3/clusters/" + clusterUUID)
 
@@ -280,20 +276,20 @@ func (s *Client) GetClusterByUUID(clusterUUID string) (*Cluster, error) {
 	return data, nil
 }
 
-// PatchCluster spec for JSON scale
-type PatchCluster struct {
+// ScaleCluster spec for JSON scale
+type ScaleCluster struct {
 	Name *string `json:"name" validate:"nonzero"`
 	Size *int64  `json:"size" validate:"nonzero"`
 }
 
 // ScaleCluster scales an existing cluster
-func (s *Client) ScaleCluster(clusterUUID, workerPoolName string, size int64) (*PatchCluster, error) {
-
+func (s *Client) ScaleCluster(clusterUUID, workerPoolName string, size int64) (*ScaleCluster, error) {
 	Debug(1, "Func: ScaleCluster")
+
 	url := s.BaseURL + "/v3/clusters/" + clusterUUID + "/node-pools/" + workerPoolName + "/"
 	Debug(2, "PATCH URL: "+url)
 
-	cluserScale := PatchCluster{
+	cluserScale := ScaleCluster{
 		Name: String(workerPoolName),
 		Size: Int64(size),
 	}
@@ -314,7 +310,7 @@ func (s *Client) ScaleCluster(clusterUUID, workerPoolName string, size int64) (*
 		return nil, err
 	}
 
-	var data PatchCluster
+	var data ScaleCluster
 	err = json.Unmarshal(bytes, &data)
 	if err != nil {
 		return nil, err
@@ -351,16 +347,15 @@ func (s *Client) ConvertJSONToCluster(jsonFile string) (*Cluster, error) {
 
 // AddCluster creates a new cluster
 func (s *Client) AddCluster(cluster *Cluster) (*Cluster, error) {
-	Debug(1, "AddCluster for "+string(*cluster.Name))
+	Debug(1, "Entered AddCluster for "+string(*cluster.Name))
 
 	Debug(2, "Start validating Cluster struct")
 	errs := validator.Validate(cluster)
 	if errs != nil {
 		Debug(1, "Errors validating Cluster struct with validator.Validate(): "+string(errs.Error()))
 		return nil, errs
-	} else {
-		Debug(3, "No Errors validating Cluster struct")
 	}
+	Debug(3, "No Errors validating Cluster struct")
 
 	url := s.BaseURL + "/v3/clusters/"
 
@@ -368,9 +363,8 @@ func (s *Client) AddCluster(cluster *Cluster) (*Cluster, error) {
 	if err != nil {
 		Debug(1, "Errors marshaling with json.Marshal(): "+string(err.Error()))
 		return nil, err
-	} else {
-		Debug(3, "No errors Marshaling JSON")
 	}
+	Debug(3, "No errors Marshaling JSON")
 
 	Debug(2, "About to POST to url "+url)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(j))
@@ -395,9 +389,8 @@ func (s *Client) AddCluster(cluster *Cluster) (*Cluster, error) {
 	if err != nil {
 		Debug(1, "Errors unmarshaling with json.Unmarshal: "+string(err.Error()))
 		return nil, err
-	} else {
-		Debug(2, "Unmarshaled response successfully")
 	}
+	Debug(2, "Unmarshaled response successfully")
 
 	Debug(2, "CCP API responded with JSON payload for cluster named "+*data.Name+" with UUID "+*data.UUID)
 	if *data.UUID == "" {
@@ -408,7 +401,7 @@ func (s *Client) AddCluster(cluster *Cluster) (*Cluster, error) {
 
 // DeleteCluster deletes a cluster
 func (s *Client) DeleteCluster(clusterUUID string) error {
-	Debug(2, "Entered DeleteCluster for UUID "+clusterUUID)
+	Debug(1, "Entered DeleteCluster for UUID "+clusterUUID)
 
 	if clusterUUID == "" {
 		return errors.New("Cluster UUID to delete is required")
@@ -425,7 +418,7 @@ func (s *Client) DeleteCluster(clusterUUID string) error {
 		return err
 	}
 
-	Debug(2, "Request sent to API with no error response")
+	Debug(2, "Request sent to API with success response")
 	return nil
 }
 
@@ -433,7 +426,7 @@ func (s *Client) DeleteCluster(clusterUUID string) error {
 
 // AddClusterBasic add a v3 cluster the easy way
 func (s *Client) AddClusterBasic(cluster *Cluster) (*Cluster, error) {
-
+	Debug(1, "Entered AddClusterBasic for cluster "+string(*cluster.Name))
 	/*
 
 		This function was added in order to provide users a better experience with adding clusters. The list of required
@@ -530,18 +523,6 @@ func (s *Client) AddClusterBasic(cluster *Cluster) (*Cluster, error) {
 		},
 	}
 
-	// provider := Provider{
-	// 	VsphereDataCenter:       String(*cluster.Infra.Datacenter),
-	// 	VsphereDatastore:        String(*cluster.Infra.Datastore),
-	// 	VsphereClientConfigUUID: String(*providerClientConfigs[0].UUID),
-	// 	//	VsphereWorkingDir:       String("/" + *cluster.Infra.Datacenter + "/vm"),
-	// }
-
-	// deployer := Deployer{
-	// 	ProviderType: String("vsphere"),
-	// 	Provider:     &provider,
-	// }
-
 	workerNodePool := WorkerNodePool{
 		VCPUs:    Int64(2),
 		Memory:   Int64(16384),
@@ -570,7 +551,7 @@ func (s *Client) AddClusterBasic(cluster *Cluster) (*Cluster, error) {
 	// "Cluster level template cannot be provided when master_node_pool and worker_node_pool are provided"
 	//	cluster.Template = nil
 
-	url := fmt.Sprintf(s.BaseURL + "/v3/clusters")
+	url := s.BaseURL + "/v3/clusters"
 
 	j, err := json.Marshal(cluster)
 
@@ -600,6 +581,523 @@ func (s *Client) AddClusterBasic(cluster *Cluster) (*Cluster, error) {
 
 	return cluster, nil
 }
+
+// // AddOns for v3 clusters
+// type AddOns struct {
+// 	DisplayName   *string             `json:"displayName" validate:"nonzero"`
+// 	Name          *string             `json:"name" validate:"nonzero"`
+// 	Namespace     *string             `json:"namespace" validate:"nonzero"`
+// 	Description   *string             `json:"description" validate:"nonzero"`
+// 	URL           *string             `json:"url" validate:"nonzero"`
+// 	OverrideFiles *string             `json:"overrideFiles,omitempty"`
+// 	Overrides     *string             `json:"overrides,omitempty"`
+// 	Conflicts     *[]string           `json:"conflicts,omitempty"`
+// 	Dependencies  *AddOnsDependencies `json:"dependencies,omitempty"`
+// }
+// type AddOnsDependencies struct {
+// 	Name 	*string `json:`
+// }
+
+// // GetAddonsList
+// // InstallAddonIstio
+//
+// // GetAddons returns a list of Addons
+// func (s *Client) GetAddons(clusterUUID string) (*[]AddOns, error) {
+// 	Debug(3, "GetAddons for cluster "+clusterUUID)
+//
+// 	url := s.BaseURL + "/v3/clusters/" + clusterUUID + "/catalog"
+//
+// 	req, err := http.NewRequest("GET", url, nil)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	bytes, err := s.doRequest(req)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	Debug(3, string(bytes))
+// 	var data *[]AddOns
+//
+// 	err = json.Unmarshal(bytes, &data)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	return data, nil
+// }
+
+// InstallAddonIstioOp Installs the Istio Operator
+func (s *Client) InstallAddonIstioOp(clusterUUID string) error {
+	Debug(1, "Entered InstallAddonIstio for UUID "+clusterUUID)
+
+	if clusterUUID == "" {
+		return errors.New("Cluster UUID is required")
+	}
+
+	url := s.BaseURL + "/v3/clusters/" + clusterUUID + "/addons/"
+
+	jsonBody := []byte(`
+	{
+        "displayName": "Istio Operator",
+        "name": "ccp-istio-operator",
+        "namespace": "ccp",
+        "description": "Istio Operator",
+        "url": "/opt/ccp/charts/ccp-istio-operator.tgz",
+        "conflicts": [
+            "ccp-kubeflow",
+            "ccp-harbor-operator"
+        ],
+        "dependencies": {
+            "_ccp-istio": {
+                "displayName": "Istio",
+                "name": "ccp-istio-cr",
+                "namespace": "ccp",
+                "description": "Istio (REQUIRES ISTIO OPERATOR)",
+                "url": "/opt/ccp/charts/ccp-istio-cr.tgz"
+            }
+		}
+	}`)
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return err
+	}
+
+	resp, err := s.doRequest(req)
+	if err != nil {
+		return err
+	}
+	Debug(3, "Response is:")
+	Debug(3, string(resp))
+
+	Debug(2, "Request sent to API with success response")
+	return nil
+}
+
+// InstallAddonIstioInstance Installs the Istio Instance (install the Operator first)
+func (s *Client) InstallAddonIstioInstance(clusterUUID string) error {
+	Debug(1, "Entered InstallAddonIstioInstance for UUID "+clusterUUID)
+
+	if clusterUUID == "" {
+		return errors.New("Cluster UUID is required")
+	}
+
+	url := s.BaseURL + "/v3/clusters/" + clusterUUID + "/addons/"
+
+	jsonBody := []byte(`
+	{
+		"displayName": "Istio",
+		"name": "ccp-istio-cr",
+		"namespace": "ccp",
+		"description": "Istio (REQUIRES ISTIO OPERATOR)",
+		"url": "/opt/ccp/charts/ccp-istio-cr.tgz"
+	}`)
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return err
+	}
+
+	resp, err := s.doRequest(req)
+	if err != nil {
+		return err
+	}
+	Debug(3, "Response is:")
+	Debug(3, string(resp))
+
+	Debug(2, "Request sent to API with success response")
+	return nil
+}
+
+// InstallAddonIstio install both
+func (s *Client) InstallAddonIstio(clusterUUID string) error {
+	err := s.InstallAddonIstioOp(clusterUUID)
+	if err != nil {
+		Debug(1, "Failed to add Add-On Istio Operator: "+string(err.Error()))
+		return err
+	}
+	time.Sleep(2 * time.Second) // wait 2 seconds before sending the next request
+	err = s.InstallAddonIstioInstance(clusterUUID)
+	if err != nil {
+		Debug(1, "Failed to add Add-On Istio Instance: "+string(err.Error()))
+		return err
+	}
+	return nil
+}
+
+// InstallAddonDashboard Installs the Istio Instance (install the Operator first)
+func (s *Client) InstallAddonDashboard(clusterUUID string) error {
+	Debug(1, "Entered InstallAddonIDashboard for UUID "+clusterUUID)
+
+	if clusterUUID == "" {
+		return errors.New("Cluster UUID is required")
+	}
+
+	url := s.BaseURL + "/v3/clusters/" + clusterUUID + "/addons/"
+
+	jsonBody := []byte(`
+	{
+		"displayName": "Dashboard",
+		"name": "kubernetes-dashboard",
+		"namespace": "ccp",
+		"description": "Dashboard",
+		"url": "/opt/ccp/charts/kubernetes-dashboard.tgz",
+		"overrideFiles": [
+			"/opt/ccp/charts/kubernetes-dashboard.yaml"
+		]
+	}`)
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return err
+	}
+
+	resp, err := s.doRequest(req)
+	if err != nil {
+		return err
+	}
+	Debug(3, "Response is:")
+	Debug(3, string(resp))
+
+	Debug(2, "Request sent to API with success response")
+	return nil
+}
+
+// InstallAddonMonitoring Installs the Istio Instance (install the Operator first)
+func (s *Client) InstallAddonMonitoring(clusterUUID string) error {
+	Debug(1, "Entered InstallAddonMonitoring for UUID "+clusterUUID)
+
+	if clusterUUID == "" {
+		return errors.New("Cluster UUID is required")
+	}
+
+	url := s.BaseURL + "/v3/clusters/" + clusterUUID + "/addons/"
+
+	jsonBody := []byte(`
+	{
+		"displayName": "Monitoring",
+		"name": "ccp-monitor",
+		"namespace": "ccp",
+		"description": "Monitoring",
+		"url": "/opt/ccp/charts/ccp-monitor.tgz"
+	}`)
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return err
+	}
+
+	resp, err := s.doRequest(req)
+	if err != nil {
+		return err
+	}
+	Debug(3, "Response is:")
+	Debug(3, string(resp))
+
+	Debug(2, "Request sent to API with success response")
+	return nil
+}
+
+// InstallAddonLogging Installs the Istio Instance (install the Operator first)
+func (s *Client) InstallAddonLogging(clusterUUID string) error {
+	Debug(1, "Entered InstallAddonLogging for UUID "+clusterUUID)
+
+	if clusterUUID == "" {
+		return errors.New("Cluster UUID is required")
+	}
+
+	url := s.BaseURL + "/v3/clusters/" + clusterUUID + "/addons/"
+
+	jsonBody := []byte(`
+	{
+		"displayName": "Logging",
+		"name": "ccp-efk",
+		"namespace": "ccp",
+		"description": "Logging",
+		"url": "/opt/ccp/charts/ccp-efk.tgz"
+	}`)
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return err
+	}
+
+	resp, err := s.doRequest(req)
+	if err != nil {
+		return err
+	}
+	Debug(3, "Response is:")
+	Debug(3, string(resp))
+
+	Debug(2, "Request sent to API with success response")
+	return nil
+}
+
+// InstallAddonHarborOp Installs the Istio Instance (install the Operator first)
+func (s *Client) InstallAddonHarborOp(clusterUUID string) error {
+	Debug(1, "Entered InstallAddonHarborOp for UUID "+clusterUUID)
+
+	if clusterUUID == "" {
+		return errors.New("Cluster UUID is required")
+	}
+
+	url := s.BaseURL + "/v3/clusters/" + clusterUUID + "/addons/"
+
+	jsonBody := []byte(`
+	{
+        "displayName": "Harbor Operator",
+        "name": "ccp-harbor-operator",
+        "namespace": "ccp",
+        "description": "Harbor Operator",
+        "url": "/opt/ccp/charts/ccp-harbor-operator.tgz",
+        "conflicts": [
+            "ccp-istio-operator"
+		]
+	}`)
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return err
+	}
+
+	resp, err := s.doRequest(req)
+	if err != nil {
+		return err
+	}
+	Debug(3, "Response is:")
+	Debug(3, string(resp))
+
+	Debug(2, "Request sent to API with success response")
+	return nil
+}
+
+// InstallAddonHarborInstance Installs the Istio Instance (install the Operator first)
+func (s *Client) InstallAddonHarborInstance(clusterUUID string) error {
+	Debug(1, "Entered InstallAddonHarborInstance for UUID "+clusterUUID)
+
+	if clusterUUID == "" {
+		return errors.New("Cluster UUID is required")
+	}
+
+	url := s.BaseURL + "/v3/clusters/" + clusterUUID + "/addons/"
+
+	jsonBody := []byte(`
+	{
+		"displayName": "Harbor",
+		"name": "ccp-harbor-cr",
+		"namespace": "ccp",
+		"description": "Harbor registry",
+		"url": "/opt/ccp/charts/ccp-harbor-cr.tgz"
+	}`)
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return err
+	}
+
+	resp, err := s.doRequest(req)
+	if err != nil {
+		return err
+	}
+	Debug(3, "Response is:")
+	Debug(3, string(resp))
+
+	Debug(2, "Request sent to API with success response")
+	return nil
+}
+
+// InstallAddonHarbor install both
+func (s *Client) InstallAddonHarbor(clusterUUID string) error {
+	err := s.InstallAddonHarborOp(clusterUUID)
+	if err != nil {
+		Debug(1, "Failed to add Add-On Istio Operator: "+string(err.Error()))
+		return err
+	}
+	time.Sleep(2 * time.Second) // wait 2 seconds before sending the next request
+	err = s.InstallAddonHarborInstance(clusterUUID)
+	if err != nil {
+		Debug(1, "Failed to add Add-On Istio Instance: "+string(err.Error()))
+		return err
+	}
+	return nil
+}
+
+// DeleteAddOnLogging deletes the addon
+func (s *Client) DeleteAddOnLogging(clusterUUID string) error {
+	Debug(1, "Entered DeleteAddOnLogging for UUID "+clusterUUID)
+
+	if clusterUUID == "" {
+		return errors.New("Cluster UUID to delete is required")
+	}
+
+	url := s.BaseURL + "/v3/clusters/" + clusterUUID + "/addons/ccp-efk"
+	Debug(2, "Sending HTTP delte to "+url)
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return err
+	}
+	_, err = s.doRequest(req)
+	if err != nil {
+		return err
+	}
+
+	Debug(2, "Request sent to API with success response")
+	return nil
+}
+
+// DeleteAddOnMonitor deletes the addon
+func (s *Client) DeleteAddOnMonitor(clusterUUID string) error {
+	Debug(1, "Entered DeleteAddOnMonitor for UUID "+clusterUUID)
+
+	if clusterUUID == "" {
+		return errors.New("Cluster UUID to delete is required")
+	}
+
+	url := s.BaseURL + "/v3/clusters/" + clusterUUID + "/addons/ccp-monitor"
+	Debug(2, "Sending HTTP delte to "+url)
+
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return err
+	}
+	_, err = s.doRequest(req)
+	if err != nil {
+		return err
+	}
+
+	Debug(2, "Request sent to API with success response")
+	return nil
+}
+
+// DeleteAddOnIstioInstance deletes the addon
+func (s *Client) DeleteAddOnIstioInstance(clusterUUID string) error {
+	Debug(1, "Entered DeleteAddOnIstioInstance for UUID "+clusterUUID)
+
+	if clusterUUID == "" {
+		return errors.New("Cluster UUID to delete is required")
+	}
+
+	url := s.BaseURL + "/v3/clusters/" + clusterUUID + "/addons/ccp-istio-cr"
+	Debug(2, "Sending HTTP delte to "+url)
+
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return err
+	}
+	_, err = s.doRequest(req)
+	if err != nil {
+		return err
+	}
+
+	Debug(2, "Request sent to API with success response")
+	return nil
+}
+
+// DeleteAddOnIstioOp deletes the addon
+func (s *Client) DeleteAddOnIstioOp(clusterUUID string) error {
+	Debug(1, "Entered DeleteAddOnIstioOp for UUID "+clusterUUID)
+
+	if clusterUUID == "" {
+		return errors.New("Cluster UUID to delete is required")
+	}
+
+	url := s.BaseURL + "/v3/clusters/" + clusterUUID + "/addons/ccp-istio-operator"
+	Debug(2, "Sending HTTP delte to "+url)
+
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return err
+	}
+	_, err = s.doRequest(req)
+	if err != nil {
+		return err
+	}
+
+	Debug(2, "Request sent to API with success response")
+	return nil
+}
+
+// DeleteAddOnIstio install both
+func (s *Client) DeleteAddOnIstio(clusterUUID string) error {
+	err := s.DeleteAddOnIstioInstance(clusterUUID)
+	if err != nil {
+		Debug(1, "Failed to delete Add-On Istio Instance: "+string(err.Error()))
+		return err
+	}
+	time.Sleep(2 * time.Second) // wait 2 seconds before sending the next request
+	err = s.DeleteAddOnIstioOp(clusterUUID)
+	if err != nil {
+		Debug(1, "Failed to delete Add-On Istio Operator: "+string(err.Error()))
+		return err
+	}
+	return nil
+}
+
+// DeleteAddOnHarborInstance deletes the addon
+func (s *Client) DeleteAddOnHarborInstance(clusterUUID string) error {
+	Debug(1, "Entered DeleteAddOnHarborInstance for UUID "+clusterUUID)
+
+	if clusterUUID == "" {
+		return errors.New("Cluster UUID to delete is required")
+	}
+
+	url := s.BaseURL + "/v3/clusters/" + clusterUUID + "/addons/ccp-harbor-cr"
+	Debug(2, "Sending HTTP delte to "+url)
+
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return err
+	}
+	_, err = s.doRequest(req)
+	if err != nil {
+		return err
+	}
+
+	Debug(2, "Request sent to API with success response")
+	return nil
+}
+
+// DeleteAddOnHarborOp deletes the addon
+func (s *Client) DeleteAddOnHarborOp(clusterUUID string) error {
+	Debug(1, "Entered DeleteAddOnHarborOp for UUID "+clusterUUID)
+
+	if clusterUUID == "" {
+		return errors.New("Cluster UUID to delete is required")
+	}
+
+	url := s.BaseURL + "/v3/clusters/" + clusterUUID + "/addons/ccp-harbor-operator"
+	Debug(2, "Sending HTTP delte to "+url)
+
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return err
+	}
+	_, err = s.doRequest(req)
+	if err != nil {
+		return err
+	}
+
+	Debug(2, "Request sent to API with success response")
+	return nil
+}
+
+// DeleteAddOnHarbor delete both
+func (s *Client) DeleteAddOnHarbor(clusterUUID string) error {
+	err := s.DeleteAddOnHarborInstance(clusterUUID)
+	if err != nil {
+		Debug(1, "Failed to delete Add-On Harbor Instance: "+string(err.Error()))
+		return err
+	}
+	time.Sleep(2 * time.Second) // wait 2 seconds before sending the next request
+	err = s.DeleteAddOnHarborOp(clusterUUID)
+	if err != nil {
+		Debug(1, "Failed to delete Add-On Harbor Operator: "+string(err.Error()))
+		return err
+	}
+	return nil
+}
+
+// -=-=-=- patch a cluster not yet implemented
 
 // // PatchCluster does the things
 // func (s *Client) PatchCluster(cluster *Cluster) (*Cluster, error) {

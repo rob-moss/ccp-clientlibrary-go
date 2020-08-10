@@ -100,8 +100,8 @@ import (
 
 // LoginCreds for provider
 type LoginCreds struct {
-	Username *string `json:"username,omitempty" validate:"nonzero"`
-	Password *string `json:"password,omitempty" validate:"nonzero"`
+	Username *string `json:"username" validate:"nonzero"`
+	Password *string `json:"password" validate:"nonzero"`
 }
 
 // How the heck does this work?
