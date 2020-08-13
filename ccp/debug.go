@@ -22,11 +22,13 @@ import (
 // debug levels
 // var debuglvl int64 = int64(0) // debug off
 // var debuglvl int64 = int64(1) // 1 basic debugging, errors and warnings
-var debuglvl int64 = int64(2) // 2 medium debugging, above + some data
+// var debuglvl int64 = int64(2) // 2 medium debugging, above + some data
 // var debuglvl int64 = int64(3) // 3 high debugging, above + all json input/output and structs
 
+var debuglvl = 3
+
 // Debug messages
-func Debug(level int64, errmsg string) {
+func Debug(level int, errmsg string) {
 
 	if level <= debuglvl {
 		fmt.Println("Debug: " + errmsg)
