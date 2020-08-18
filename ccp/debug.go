@@ -25,7 +25,7 @@ import (
 // var debuglvl int64 = int64(2) // 2 medium debugging, above + some data
 // var debuglvl int64 = int64(3) // 3 high debugging, above + all json input/output and structs
 
-var debuglvl = 3
+var debuglvl = 0
 
 // Debug messages
 func Debug(level int, errmsg string) {

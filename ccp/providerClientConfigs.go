@@ -81,6 +81,7 @@ func (s *Client) GetNetworkProviderSubnetByName(networkProviderName string) (*Ne
 // GetNetworkProviderSubnets Get and return All Providers
 func (s *Client) GetNetworkProviderSubnets() ([]NetworkProviderSubnet, error) {
 
+	// in CCP 6.x this is still part of the v2 API
 	url := s.BaseURL + "/2/network_service/subnets/"
 
 	req, err := http.NewRequest("GET", url, nil)

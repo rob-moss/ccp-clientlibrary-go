@@ -28,27 +28,45 @@ import (
 	validator "gopkg.in/validator.v2"
 )
 
-/* toDo
+/* ToDo
+- Create/update functions to:
+-- Get kubernetes version for installing clusters (from image?)
+-- AddClusterBasic - update func
+-- GetClusterAddons - list installed addons
+- GetSubnets
+- GetSubnet(by name)
+- GetProviders
+- GetProvider(by name)
+//
+- Control Plane install:
+-- Install v2 cluster from CCP control plane
+- Provider(s)
+-- Set up new vSphere provider
+- Stretch goals for v3:
+- EKS/AKS/GCP
+-- Create provider(s)
+-- Create clusters
+-- Delete clusters
+-- Scale clusters
+
+Done:
 - Create JSON config: done
 - Make connection to CCP CP via Proxy (optional): done
 - Set defaults: image, sshkey, sshuser, provider, network: done
 - Log in to CCP using X-Auth-Token: done
-- Create functions to:
--- Get kubernetes version for deployments
 -- Fetch provider by name -> uuid: done
 -- Fetch subnet by name -> uuid: done
 -- Create Cluster (Calico, vSphere): done
 -- Scale Cluster (Worker nodes): done
 -- Delete Cluster: done
-
-v2 todo
 - Create functions to:
--- Install Add-Ons
---- Istio
---- Harbor
---- HX-CSI
---- Monitoring
---- Logging
+-- Install Add-Ons: done
+-- Istio: done
+-- Harbor: done
+-- HX-CSI: done
+-- Monitoring: done
+-- Logging: done
+-- kubeflow: done
 */
 
 // Cluster v3 cluster
@@ -192,6 +210,7 @@ type VsphereClientConfig struct {
 // generated from https://mholt.github.io/json-to-go/
 // with future versions of CCP this may need to be re-generated with updated JSON catalogue from
 // path /v3/clusters/<clusteruuid>/catalog
+// this is working for CCP 6.x
 type AddOnsCatalogue struct {
 	CcpMonitor struct {
 		DisplayName string `json:"displayName"`
@@ -390,9 +409,6 @@ func (s *Client) ScaleCluster(clusterUUID, workerPoolName string, size int64) (*
 
 	return &data, nil
 }
-
-// --- below do not work, need fixin
-//
 
 // ConvertJSONToCluster convers JSON
 func (s *Client) ConvertJSONToCluster(jsonFile string) (*Cluster, error) {
@@ -596,12 +612,14 @@ func (s *Client) AddClusterBasic(cluster *Cluster) (*Cluster, error) {
 	}
 
 	workerNodePool := WorkerNodePool{
+		Size:     Int64(1),
 		VCPUs:    Int64(2),
-		Memory:   Int64(16384),
+		Memory:   Int64(32768),
 		Template: String(*cluster.MasterNodePool.Template), // use same template as master
 	}
 
 	masterNodePool := MasterNodePool{
+		Size:     Int64(1),
 		VCPUs:    Int64(2),
 		Memory:   Int64(16384),
 		Template: String(*cluster.MasterNodePool.Template),
