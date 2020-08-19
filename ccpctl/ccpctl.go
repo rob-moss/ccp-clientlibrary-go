@@ -10,6 +10,8 @@ import (
 	"os"
 	"os/user"
 	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -44,15 +46,18 @@ type Defaults struct {
 	CPUser            string    `json:"cpuser"`
 	CPPass            string    `json:"cppass"`
 	CPURL             string    `json:"cpurl"`
-	CPToken           string    `json:"cptoken"`
-	CPTokenTime       time.Time `json:"cptokentime"`
-	CPProviderDfl     string    `json:"cpproviderdfl"`
-	CPProviderDflUUID string    `json:"cpproviderdflUUID"`
-	CPSubnetDfl       string    `json:"cpsubnetdfl`
-	CPSubnetDflUUID   string    `json:"cpsubnetdflUUID"`
-	CPDatastoreDfl    string    `json:"cpdatastoredfl"`
-	CPDatacenterDfl   string    `json:"cpdatacenterdfl"`
-	CPClusterDfl      string    `json:"cpclusterdfl"`
+	CPClusterDfl      string    `json:"cpclusterdfl"`      // default CCP cluster to work on
+	CPToken           string    `json:"cptoken"`           // API token
+	CPTokenTime       time.Time `json:"cptokentime"`       // API token expiry
+	CPDatastoreDfl    string    `json:"cpdatastoredfl"`    // Default infra DS
+	CPDatacenterDfl   string    `json:"cpdatacenterdfl"`   // Default infra DC
+	CPImageDfl        string    `json:"cpimagedfl"`        // Default CCP image name
+	CPNetworkDfl      string    `json:"cpnetworkdfl"`      // Default Network/Portgroup
+	CPProviderDfl     string    `json:"cpproviderdfl"`     // Default Provider name
+	CPProviderDflUUID string    `json:"cpproviderdflUUID"` // Default Provider UUID
+	CPSubnetDfl       string    `json:"cpsubnetdfl`        // Default Subnet name
+	CPSubnetDflUUID   string    `json:"cpsubnetdflUUID"`   // Default Subnet UUID
+	CPVSClusterDfl    string    `json:"cpvsclusterdfl"`    // Default vSphere Cluster
 }
 
 // todo:
@@ -180,8 +185,18 @@ func menuHelp() {
 }
 
 func splitparam(arg string) (param, value string) {
+	if !nonzero(arg) {
+		return "", ""
+	}
+	matched, _ := regexp.Match("=", []byte(arg))
+	if !matched {
+		return "", ""
+	}
 	s := strings.Split(arg, "=")
-	return s[0], s[1]
+	first := s[0]
+	rest := strings.Join(s[1:], "=")
+	// return s[0], s[1]
+	return first, rest
 
 }
 
@@ -211,13 +226,31 @@ func nonzero(v interface{}) bool {
 func menuHelpCP() {
 	fmt.Println(`
 	add Control Plane info
-		setcp cpname=cpname clusterdfl=clustername providerdfl=providername subnetdfl=subnetname datastoredfl=datastore datacenterdfl=dc
+		setcp 
+			sshuser=ccpadmin			// must have
+			sshkey=sshkey				// must have
+			cpuser=admin				// must have
+			cppass=password				// must have
+			cpurl=https://10.100.100.1 // must have
+			// below defaults are optional
+			clusterdfl=clustername	
+			providerdfl=providername 
+			subnetdfl=subnetname 
+			datastoredfl=datastore 
+			datacenterdfl=dc 
+			vsclusterdfl=vsphereclustername
+			imagedfl=ccp-tenant-image-1.16.3-ubuntu18-6.1.1
 	`)
 }
 
 // MenuSetCP sets Control Plane data
 // func (s *Defaults) menusetCP(args []string) (*ControlPlane, error) {
 func menuSetCP(args []string, Settings Defaults, client *ccp.Client) (*Defaults, error) {
+	if len(args) < 1 {
+		menuHelpCP()
+		// fmt.Println("Not enough args")
+		return nil, errors.New("Not enough args")
+	}
 	// fmt.Println(args)
 	// var newCP ControlPlane // new ControlPlane struct - populate this and return it
 	// get all args and loop over case statement to collect all vars
@@ -242,8 +275,6 @@ func menuSetCP(args []string, Settings Defaults, client *ccp.Client) (*Defaults,
 			fmt.Println("cpurl updated with: " + value)
 			Settings.CPURL = value
 		case "providerdfl":
-			// fmt.Println("providerdfl updated with" + value)
-			// look up name and also set UUID
 			provider, err := client.GetInfraProviderByName(value)
 			if err != nil {
 				fmt.Println("* Error getting provider: ", err)
@@ -253,7 +284,6 @@ func menuSetCP(args []string, Settings Defaults, client *ccp.Client) (*Defaults,
 			Settings.CPProviderDflUUID = *provider.UUID // set provider UUID
 			fmt.Println("* Setting providerdfl to ", value, " and UUID ", *provider.UUID)
 		case "subnetdfl":
-			// fmt.Println("subnetdfl " + value)
 			subnet, err := client.GetNetworkProviderSubnetByName(value)
 			if err != nil {
 				fmt.Println("* Error getting subnet: ", err)
@@ -268,8 +298,11 @@ func menuSetCP(args []string, Settings Defaults, client *ccp.Client) (*Defaults,
 		case "datacenterdfl":
 			fmt.Println("datacenterdfl updated with: " + value)
 			Settings.CPDatacenterDfl = value
-		case "clusterdfl":
-			fmt.Println("clusterdfl updated with: " + value)
+		case "vsclusterdfl": // vSphere cluster
+			fmt.Println("vscluster (vSphere cluster) updated with: " + value)
+			Settings.CPVSClusterDfl = value
+		case "clusterdfl": // CCP cluster
+			fmt.Println("clusterdfl (CCP Cluster) updated with: " + value)
 			Settings.CPClusterDfl = value
 		case "sshuser":
 			fmt.Println("sshuser updated with: " + value)
@@ -277,7 +310,13 @@ func menuSetCP(args []string, Settings Defaults, client *ccp.Client) (*Defaults,
 		case "sshkey":
 			fmt.Println("sshkey updated with: " + value)
 			Settings.SSHKey = value
-		case "default":
+		case "imagedfl":
+			fmt.Println("image updated with: " + value)
+			Settings.CPImageDfl = value
+		case "networkdfl":
+			fmt.Println("network updated with: " + value)
+			Settings.CPNetworkDfl = value
+		default:
 			fmt.Println("Not understood: param=" + param + " value=" + value)
 			menuHelpCP()
 			return nil, errors.New("Not understood param " + param + " value=" + value)
@@ -303,7 +342,15 @@ func menuSetCP(args []string, Settings Defaults, client *ccp.Client) (*Defaults,
 		menuHelpCP()
 		return nil, errors.New("CPName is missing")
 	}
+	// write the settings
+	err := writeDefaults(&Settings)
+	if err != nil {
+		fmt.Println("writeDefaults error:", err)
+		return nil, err
+	}
+
 	return &Settings, nil
+
 }
 
 func menuGetCP(Settings *Defaults) error {
@@ -410,95 +457,260 @@ func menuGetClusters(client *ccp.Client, jsonout bool) {
 	// return nil
 }
 
-func menuAddCluster(client *ccp.Client, args []string, Settings *Defaults) error {
-	// check for defaults
-	// range over args to cluster specifics:
-	// name
-	// subnet
-	// provider
-	// workers
+func getKubeVerFromImage(value string, a string, b string) string {
+	// https://www.dotnetperls.com/between-before-after-go
+	// Get substring between two strings.
+	posFirst := strings.Index(value, a)
+	if posFirst == -1 {
+		return ""
+	}
+	posLast := strings.Index(value, b)
+	if posLast == -1 {
+		return ""
+	}
+	posFirstAdjusted := posFirst + len(a)
+	if posFirstAdjusted >= posLast {
+		return ""
+	}
+	return value[posFirstAdjusted:posLast]
+}
 
-	var newclname, newclimage, newclkubver, newcldstore, newclnet, newcldc, newclworkers string
-	for _, arg := range os.Args[1:] {
+func strtoint(string string) int {
+	int, err := strconv.Atoi(string)
+	if err != nil {
+		return 0
+	}
+	return int
+}
+
+func strtoint64(string string) int64 {
+	int, err := strconv.Atoi(string)
+	if err != nil {
+		return int64(0)
+	}
+	return int64(int)
+}
+
+func menuClusterHelp() {
+	fmt.Println(`
+	addcluster
+		clustername 	// Must have this
+		[image=ccpimage]	// Set here or read default from setcp
+		[loadbalancers]		// Default to 2
+		[workers=1]			// Default to 1
+		[masters=2]			// Default to 1. Must be either 1 or 3
+		[datastore]			// Set here or read default from setcp
+		[dc]				// Set here or read default from setcp
+		[network]			// Set here or read default from setcp
+		[vscluster]			// Set here or read default from setcp
+		[provideruuid]		// Set here or read default from setcp
+		[subnetuuid]		// Set here or read default from setcp
+		[podcidr]			// Default 192.168.0.0/16
+		`)
+
+}
+func menuAddCluster(client *ccp.Client, args []string, Settings *Defaults) (*ccp.Cluster, error) {
+
+	// fmt.Println("Args: ", args)
+	// Check if enough args
+	if len(args) < 1 {
+		menuClusterHelp()
+		return nil, errors.New("Error: cluster name is blank, exiting")
+	}
+	// set vars
+	var newclname, newclimage, newcldstore, newcldc, newclvscluster string
+	var newclprovideruuid, newclsubnetuuid, newclpodcidr string
+	var newclnet []string
+	var newcllbipnum, newclworkers, newclmasters int64
+
+	newclname = args[0] // first item is clustername
+
+	// check for settings
+	for _, arg := range args[1:] { // range over args starting from index 1 (2nd arg)
 		param, value := splitparam(arg)
 		switch param {
 		case "name":
-			fmt.Println("cluster name: " + value)
-			newclname = value
+			newclname = value // checked
 		case "image":
-			newclimage = value
-		case "kubver":
-			newclkubver = value // can I get this from the image?
+			newclimage = value // checked
 		case "workers":
-			newclworkers = value
+			newclworkers = strtoint64(value) // checked
+		case "masters":
+			newclmasters = strtoint64(value) // checked
 		case "datastore":
-			newcldstore = value
+			newcldstore = value // checked
+		case "loadbalancers":
+			newcllbipnum = strtoint64(value) // checked
 		case "dc":
-			newcldc = value
+			newcldc = value // checked
 		case "network":
-			newclnet = value
+			// newclnet[0] = value // checked
+			newclnet = append(newclnet, value) // checked
+		case "vscluster":
+			newclvscluster = value // checked
+		case "provideruuid":
+			newclprovideruuid = value // checked
+		case "subnetuuid":
+			newclsubnetuuid = value // checked
+		case "podcidr":
+			newclpodcidr = value
+		default:
+			fmt.Println("Error, flag ", arg, " unknown")
 		}
 	}
 
-	if !nonzero(newclname) {
-		fmt.Println("Error: cluster name is blank, exiting")
-		return errors.New("Error: cluster name is blank, exiting")
+	// if not set then return with an error
+	if newclname == "" {
+		return nil, errors.New("Error: cluster name is blank, exiting")
 	}
-	if !nonzero(newclimage) {
-		fmt.Println("Error: image is blank, exiting")
-		return errors.New("Error: image is blank, exiting")
+	fmt.Println("* Clustername: ", newclname)
+
+	if newclimage == "" { // if blank
+		if Settings.CPImageDfl == "" {
+			return nil, errors.New("Error: image is blank, and defaults blank. Either setcp or specify")
+		}
+		newclimage = Settings.CPImageDfl
 	}
-	ccptemplateimg := ccp.String("hx1-ccp-tenant-image-1.16.3-ubuntu18-6.1.1-pre")
-	kubernetesversion := ccp.String("1.16.3")
+	fmt.Println("* Image: ", newclimage)
+
+	// if not defined then set with a useful default
+	if newclworkers < 1 {
+		fmt.Println("* Workers: workers is blank, setting to 1")
+		newclworkers = 1
+	}
+	if newclmasters < 1 {
+		fmt.Println("* Masters: masters is blank, setting to 1")
+		newclmasters = 1
+	} else {
+		switch newclmasters {
+		case 1:
+			// ok
+		case 3:
+			// ok
+		default:
+			// not ok.
+			return nil, errors.New("Error: newclmasters not set to 1 or 3, exiting")
+		}
+	}
+	if newcllbipnum < 1 {
+		fmt.Println("* Loadbalancers: Load Balancers is blank, setting to 2")
+		newcllbipnum = 2
+	}
+	if newclpodcidr == "" {
+		fmt.Println("* PodCIDR: podcidr is blank, setting to 192.168.0.0/16")
+		newclpodcidr = "192.168.0.0/16"
+	}
+
+	// if not defined then pull from Defaults
+	if Settings.SSHUser == "" {
+		return nil, errors.New("* SSHUser: SSH User is blank, Set it in setcp. Exiting")
+	}
+	if Settings.SSHKey == "" {
+		return nil, errors.New("* SSHKey: SSH Key is blank, Set it in setcp.  Exiting")
+	}
+
+	// check if these are blank, try to pull defaults or exit
+	if newcldstore == "" { // if blank
+		if Settings.CPDatastoreDfl == "" {
+			return nil, errors.New("* Datastore: datastore is blank, and defaults blank. Either setcp or specify")
+		}
+		newcldstore = Settings.CPDatastoreDfl
+	}
+	if newcldc == "" { // if blank
+		if Settings.CPDatacenterDfl == "" {
+			return nil, errors.New("* Datacenter: datacenter is blank, and defaults blank. Either setcp or specify")
+		}
+		newcldc = Settings.CPDatacenterDfl
+	}
+	if newclprovideruuid == "" { // if blank
+		if Settings.CPProviderDflUUID == "" {
+			return nil, errors.New("* ProviderUUID: infra provider UUID is blank, and defaults blank. Either setcp or specify")
+		}
+		newclprovideruuid = Settings.CPProviderDflUUID
+	}
+	if newclsubnetuuid == "" { // if blank
+		if Settings.CPSubnetDflUUID == "" {
+			return nil, errors.New("* SubnetUUID: subnet UUID is blank, and defaults blank. Either setcp or specify")
+		}
+		newclsubnetuuid = Settings.CPSubnetDflUUID
+	}
+
+	if len(newclnet) == 0 { // if blank
+		if Settings.CPNetworkDfl == "" {
+			return nil, errors.New("* Network: network is blank, and defaults blank. Either setcp or specify")
+		}
+		newclnet = append(newclnet, Settings.CPNetworkDfl)
+	}
+	// fmt.Println("-=-=- postclnet -=-=-")
+
+	if newclvscluster == "" { // if blank
+		if Settings.CPClusterDfl == "" {
+			return nil, errors.New("* vSphere Cluster: vscluster is blank, and defaults blank. Either setcp or specify")
+		}
+		newclvscluster = Settings.CPVSClusterDfl
+	}
+
+	// all settings checked, should have everything ready
+
+	kubernetesversion := getKubeVerFromImage(newclimage, "image-", "-ubuntu18")
 	newCluster := &ccp.Cluster{
-		Name: ccp.String("romoss-testcp01-tenant03"),
-		Type: ccp.String("vsphere"),
+		Name: &newclname,
+		Type: ccp.String("vsphere"), // always vSphere
 		// WorkerNodePool: newWorkers,
 		WorkerNodePool: &[]ccp.WorkerNodePool{
 			// first worker node pool
 			ccp.WorkerNodePool{
 				Name:              ccp.String("node-pool"), // default name
-				Size:              ccp.Int64(1),
-				VCPUs:             ccp.Int64(8),
-				Memory:            ccp.Int64(32768),
-				Template:          ccptemplateimg,
-				SSHUser:           &Settings.SSHUser,
-				SSHKey:            &Settings.SSHKey,
-				KubernetesVersion: kubernetesversion,
+				Size:              ccp.Int64(newclworkers), // default 1 if not defined
+				VCPUs:             ccp.Int64(8),            // Workers always 8
+				Memory:            ccp.Int64(32768),        // Workers always 32 G
+				Template:          &newclimage,             // CCP Image / Template
+				SSHUser:           &Settings.SSHUser,       // from Defaults
+				SSHKey:            &Settings.SSHKey,        // from Defaults
+				KubernetesVersion: &kubernetesversion,      // from Image
 			},
 		},
 		MasterNodePool: &ccp.MasterNodePool{
 			Name:              ccp.String("master-group"),
-			Size:              ccp.Int64(1),
+			Size:              ccp.Int64(newclmasters),
 			VCPUs:             ccp.Int64(2),
 			Memory:            ccp.Int64(16384),
-			Template:          ccptemplateimg,
+			Template:          &newclimage,
 			SSHUser:           &Settings.SSHUser,
 			SSHKey:            &Settings.SSHKey,
-			KubernetesVersion: kubernetesversion,
+			KubernetesVersion: &kubernetesversion,
 		},
 		Infra: &ccp.Infra{
-			Datastore:  ccp.String("GFFA-HX1-CCPInstallTest01"),
-			Datacenter: ccp.String("GFFA-DC"),
-			Networks:   &[]string{"DV_VLAN1060"},
-			Cluster:    ccp.String("GFFA-HX1-Cluster"),
+			Datastore:  &newcldstore,
+			Datacenter: &newcldc,
+			Networks:   &newclnet, // array of []strings
+			Cluster:    &newclvscluster,
 		},
-		KubernetesVersion:  kubernetesversion,
-		InfraProviderUUID:  infraProvider.UUID,
-		SubnetUUID:         networkProviderSubnet.UUID,
-		LoadBalancerIPNum:  ccp.Int64(2),
+		KubernetesVersion:  &kubernetesversion,
+		InfraProviderUUID:  &newclprovideruuid,
+		SubnetUUID:         &newclsubnetuuid,
+		LoadBalancerIPNum:  ccp.Int64(newcllbipnum),
 		IPAllocationMethod: ccp.String("ccpnet"),
 		AWSIamEnabled:      ccp.Bool(false),
 		NetworkPlugin: &ccp.NetworkPlugin{
 			Name: ccp.String("calico"),
 			Details: &ccp.NetworkPluginDetails{
-				PodCIDR: ccp.String("192.168.0.0/16"),
+				PodCIDR: ccp.String(newclpodcidr), // default 192.168.0.0/16
 			},
 		},
 	}
-	fmt.Println(newCluster)
 
-	// err = ccp.AddCluster(newCluster)
+	// prettyPrintJSONCluster(newCluster)
+
+	fmt.Println("* Sending new cluster to be created: ", newCluster.Name)
+
+	// Create cluster
+	cluster, err := client.AddCluster(newCluster)
+	if err != nil {
+		return nil, err
+	}
+	// Return created cluster struct
+	return cluster, nil
 }
 
 func menuGetCluster(client *ccp.Client, clusterName string, jsonout bool) error {
@@ -579,6 +791,45 @@ func menuGetSubnet(client *ccp.Client, subnetName string, jsonout bool) {
 	}
 }
 
+// ccpctl help
+
+// add Control Plane info
+//		setcp cpname=cpname provider=providername subnet=subnetname datastore=datastore datacenter=dc
+//		setcp cpName=cpname [provider=providername] [subnet=subnetname] [datastore=datastore] [datacenter=dc]
+//		setcp cpNetworkProviderUUID // looks up name, sets default
+//		setcp cpCloudProviderUUID // looks up name, sets default
+//		setcp cpNetworkVLAN // vSphere PortGroup
+//		setcp cpDatacenter	// vSphere DC
+//		setcp cpDatastore // vSphere DS
+//		delcp cpName // deletes Control Plane info
+//		getcp // lists CPs if no args
+//		getcps // lists CPs if no args
+//		getcp cpName // lists CP details
+// cluster operations
+//		addcluster	<clustername> [provider=providername] [subnet=subnetname] [datastore=datastore] [datacenter=dc]
+//					uses defaults for provider, subnet, datastore, datacenter if not provided
+//		setcluster	<clustername> [provider=providername] [subnet=subnetname] [datastore=datastore] [datacenter=dc]
+//					uses defaults for provider, subnet, datastore, datacenter if not provided
+//		delcluster <clustername>
+//		getcluster <clustername> // pulls cluster info - master node IP(s), addons, # worker nodes
+//		getcluster <clustername> kubeconfig // gets and outputs kubeconfig
+//		getcluster <clustername> addons // lists Addons installed to cluster
+//		getcluster <clustername> masters // lists Master nodes installed to cluster
+//		getcluster <clustername> workers // lists Worker nodes installed to cluster
+//		scalecluster <clustername> workers=# [pool=poolname] // scale to this many worker nodes in a cluster
+// cluster addons
+// 		addclusteraddon <clustername> <addon> // install an addon
+// 		delclusteraddon <clustername> <addon> // install an addon
+// 		getclusteraddon <clustername> <addon> // install an addon
+//
+// kubectl config
+//		setkubeconf <clustername> [cpname] // sets ~/.kube/config to kubeconf
+//
+// control plane cluster install (API V2)
+//		installcp [subnet=subnetname] [datastore=datastore] [datacenter=dc] [iprange=1.2.3.4]
+//			[ipstart=1.2.3.4] [ipend=1.2.3.4] [cpuser=cpUser|use defaults] [cppass=cpPass|use defaults]
+//			all CP things
+
 // main
 func main() {
 	fmt.Println("* Entered main")
@@ -600,8 +851,8 @@ func main() {
 	t2 := time.Now()
 	timediff := t2.Sub(t1).Minutes()
 	// fmt.Println(int64(timediff), "Minutes elapsed since login")
-	if timediff >= float64(180) {
-		fmt.Println("* Login older than 180 minutes, logging in again")
+	if timediff >= float64(180) || Settings.CPToken == "" {
+		fmt.Println("* Logging in again")
 		err := client.Login(client)
 		if err != nil {
 			fmt.Println(err)
@@ -613,7 +864,6 @@ func main() {
 			fmt.Println("* Write Defults error: ", err)
 			return
 		}
-
 	}
 
 	// Check if JSON output is requested
@@ -625,12 +875,11 @@ func main() {
 			fmt.Println("* Setting JSON output")
 		}
 	}
-	// fmt.Println("* JSON output set to ", jsonout)
+
 	//
 	// ---- Main code to check commandline params ---- //
 	//
 
-cli:
 	for _, arg := range os.Args[1:] {
 		switch arg {
 		case "logincp":
@@ -640,39 +889,42 @@ cli:
 			}
 			Settings.CPToken = client.XAuthToken // keep the xauthtoken
 			Settings.CPTokenTime = time.Now()    // timestamp now
+			return
 		case "setdefault":
 			// fmt.Println("setdefault " + string(pos))
 			fmt.Println("Not implemented yet")
+			return
 		case "setcp":
-			// create new ControlPlane struct
 			fmt.Println("* setcp Set Control Plane data")
 			Settings, err = menuSetCP(os.Args[2:], *Settings, client)
 			if err != nil {
 				fmt.Println("menuSetCP error:", err)
-				// exit without saving new json
-				return
 			}
-			// drop through to default below writeDefaults(Settings)
-			break cli
+			return
 		case "delcp":
 			fmt.Println("Not implemented yet")
 			return
 		case "getcp":
 			menuGetCP(Settings)
 			return
+		// Clusters
 		case "addcluster":
-			fmt.Println("addcluster <clustername>")
-			err = menuAddCluster(client, os.Args[:1], Settings)
-			if err != nil {
-				fmt.Println("menuSetCP error:", err)
+			if len(os.Args[1:]) < 2 {
+				menuClusterHelp()
 				return
 			}
-
+			newcluster, err := menuAddCluster(client, os.Args[2:], Settings)
+			if err != nil {
+				fmt.Println("addcluster error:", err)
+				return
+			}
+			fmt.Println("* New cluster created:")
+			prettyPrintJSONCluster(newcluster)
+			return
 		case "setcluster":
 			fmt.Println("Not implemented yet")
 		case "delcluster":
 			fmt.Println("delcluster [<clustername>]")
-			// menuDelCluster(client, os.Args[2])
 			return
 		case "getcluster":
 			menuGetCluster(client, os.Args[2], jsonout)
@@ -699,88 +951,37 @@ cli:
 			return
 		case "installaddon":
 			fmt.Println("installaddon [<clustername>] <addon>")
+			return
 		case "deladdon":
 			fmt.Println("deladdon [<clustername>] <addon>")
+			return
 		case "getaddons":
 			fmt.Println("getaddons [<clustername>]")
-			// case "getclusterjson":
-			// 	menuGetClusterJSON(client, os.Args[2], jsonout)
-			// 	return
-			// case "getclustersjson":
-			// 	menuGetClustersJSON(client)
-			// 	return
-			// case "getprovidersjson":
-			// 	menuGetProvidersJSON(client, jsonout)
-			// 	return
+
 		case "help":
 			fmt.Println("help")
 			menuHelp()
 			return
+
+		// todo
+		// case "getclusterjson":
+		// 	menuGetClusterJSON(client, os.Args[2], jsonout)
+		// 	return
+		// case "getclustersjson":
+		// 	menuGetClustersJSON(client)
+		// 	return
+		// case "getprovidersjson":
+		// 	menuGetProvidersJSON(client, jsonout)
+		// 	return
+
 		default:
 			fmt.Printf("Unknown option:   %s.\n", arg)
 		}
 	}
 
 	fmt.Println("* Exiting and saving settings")
-	err = writeDefaults(Settings)
-	if err != nil {
-		fmt.Println("writeDefaults error:", err)
-		return
-	}
 
 	return
-
-	// read config file
-	// load to struct
-	// load default CP
-	// check if CPTokenTime greater than X hours
-
-	// ccpctl help
-	// defaults
-	//		setdefault // asks all the defaults
-	//		setdefault cpName
-	//		setdefault cpCluster
-	//		setdefault cpSSHUser // Username ie ccpadmin
-	//		setdefault ccpSSHKey // SSH key
-	//		setdefault cpUser // CP username ie Admin
-	//		setdefault cpPass // CP password ie C1sc0123
-	// add Control Plane info
-	//		setcp <asks interactive>
-	//		setcp cpname=cpname provider=providername subnet=subnetname datastore=datastore datacenter=dc
-	//		setcp cpName=cpname [provider=providername] [subnet=subnetname] [datastore=datastore] [datacenter=dc]
-	//		setcp cpNetworkProviderUUID // looks up name, sets default
-	//		setcp cpCloudProviderUUID // looks up name, sets default
-	//		setcp cpNetworkVLAN // vSphere PortGroup
-	//		setcp cpDatacenter	// vSphere DC
-	//		setcp cpDatastore // vSphere DS
-	//		delcp cpName // deletes Control Plane info
-	//		getcp // lists CPs if no args
-	//		getcps // lists CPs if no args
-	//		getcp cpName // lists CP details
-	// cluster operations
-	//		addcluster	<clustername> [provider=providername] [subnet=subnetname] [datastore=datastore] [datacenter=dc]
-	//					uses defaults for provider, subnet, datastore, datacenter if not provided
-	//		setcluster	<clustername> [provider=providername] [subnet=subnetname] [datastore=datastore] [datacenter=dc]
-	//					uses defaults for provider, subnet, datastore, datacenter if not provided
-	//		delcluster <clustername>
-	//		getcluster <clustername> // pulls cluster info - master node IP(s), addons, # worker nodes
-	//		getcluster <clustername> kubeconfig // gets and outputs kubeconfig
-	//		getcluster <clustername> addons // lists Addons installed to cluster
-	//		getcluster <clustername> masters // lists Master nodes installed to cluster
-	//		getcluster <clustername> workers // lists Worker nodes installed to cluster
-	//		scalecluster <clustername> workers=# [pool=poolname] // scale to this many worker nodes in a cluster
-	// cluster addons
-	// 		addclusteraddon <clustername> <addon> // install an addon
-	// 		delclusteraddon <clustername> <addon> // install an addon
-	// 		getclusteraddon <clustername> <addon> // install an addon
-	//
-	// kubectl config
-	//		setkubeconf <clustername> [cpname] // sets ~/.kube/config to kubeconf
-	//
-	// control plane cluster install (API V2)
-	//		installcp [subnet=subnetname] [datastore=datastore] [datacenter=dc] [iprange=1.2.3.4]
-	//			[ipstart=1.2.3.4] [ipend=1.2.3.4] [cpuser=cpUser|use defaults] [cppass=cpPass|use defaults]
-	//			all CP things
 
 	//
 	//
