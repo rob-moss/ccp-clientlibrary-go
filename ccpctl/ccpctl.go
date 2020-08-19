@@ -700,7 +700,9 @@ func menuAddCluster(client *ccp.Client, args []string, Settings *Defaults) (*ccp
 		},
 	}
 
-	// prettyPrintJSONCluster(newCluster)
+	// if jsonout {
+	// 	prettyPrintJSONCluster(newCluster)
+	// }
 
 	fmt.Println("* Sending new cluster to be created: ", newCluster.Name)
 
@@ -716,7 +718,7 @@ func menuAddCluster(client *ccp.Client, args []string, Settings *Defaults) (*ccp
 func menuGetCluster(client *ccp.Client, clusterName string, jsonout bool) error {
 	cluster, err := client.GetClusterByName(clusterName)
 	if err != nil {
-		fmt.Println("DeleteCluster error:", err)
+		fmt.Println("GetCluster error:", err)
 		return err
 	}
 	if jsonout {
@@ -727,13 +729,19 @@ func menuGetCluster(client *ccp.Client, clusterName string, jsonout bool) error 
 	return nil
 }
 
-func menuDelCluster(client *ccp.Client, clusterUUID string) error {
-	err := client.DeleteCluster(clusterUUID)
+func menuDelCluster(client *ccp.Client, clusterName string) error {
+	cluster, err := client.GetClusterByName(clusterName)
 	if err != nil {
 		fmt.Println("DeleteCluster error:", err)
 		return err
 	}
-	fmt.Println("Cluster ", clusterUUID, " deleted")
+
+	err = client.DeleteCluster(*cluster.UUID)
+	if err != nil {
+		fmt.Println("DeleteCluster error:", err)
+		return err
+	}
+	fmt.Println("Cluster ", clusterName, " deleted")
 	return nil
 }
 
@@ -909,22 +917,25 @@ func main() {
 			return
 		// Clusters
 		case "addcluster":
-			if len(os.Args[1:]) < 2 {
-				menuClusterHelp()
-				return
-			}
+			// if len(os.Args[1:]) < 2 {
+			// 	menuClusterHelp()
+			// 	return
+			// }
 			newcluster, err := menuAddCluster(client, os.Args[2:], Settings)
 			if err != nil {
 				fmt.Println("addcluster error:", err)
 				return
 			}
-			fmt.Println("* New cluster created:")
-			prettyPrintJSONCluster(newcluster)
+			fmt.Println("* New cluster created:", newcluster.Name)
+			if jsonout {
+				prettyPrintJSONCluster(newcluster)
+			}
 			return
 		case "setcluster":
 			fmt.Println("Not implemented yet")
+			return
 		case "delcluster":
-			fmt.Println("delcluster [<clustername>]")
+			menuDelCluster(client, os.Args[2])
 			return
 		case "getcluster":
 			menuGetCluster(client, os.Args[2], jsonout)
@@ -949,6 +960,7 @@ func main() {
 		case "getsubnet":
 			menuGetSubnet(client, os.Args[2], jsonout)
 			return
+		// addons todo
 		case "installaddon":
 			fmt.Println("installaddon [<clustername>] <addon>")
 			return
@@ -957,137 +969,20 @@ func main() {
 			return
 		case "getaddons":
 			fmt.Println("getaddons [<clustername>]")
-
+			return
+		// print help
 		case "help":
 			fmt.Println("help")
 			menuHelp()
 			return
-
-		// todo
-		// case "getclusterjson":
-		// 	menuGetClusterJSON(client, os.Args[2], jsonout)
-		// 	return
-		// case "getclustersjson":
-		// 	menuGetClustersJSON(client)
-		// 	return
-		// case "getprovidersjson":
-		// 	menuGetProvidersJSON(client, jsonout)
-		// 	return
-
 		default:
 			fmt.Printf("Unknown option:   %s.\n", arg)
 		}
 	}
 
-	fmt.Println("* Exiting and saving settings")
+	fmt.Println("* Exiting")
 
 	return
-
-	//
-	//
-	//
-	// old code //
-	//
-	//
-	// client := ccp.NewClient(cpUser, cpPass, cpURL)
-
-	// err = client.Login(client)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-
-	// --
-
-	// clusters, err := client.GetClusters()
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-	// fmt.Println("* clusters = " + strconv.Itoa(len(clusters)))
-
-	// ----
-	// fmt.Println("* Get first cluster name")
-	// fmt.Println(string(*clusters[0].Name))
-	// clustername := string(*clusters[0].Name)
-
-	// GetClusterByName gets all clusters, searches for matching cluster name, returns *Cluster struct
-	// clustername := string("romoss-testcp01-tenant01")
-	// cluster, err := client.GetClusterByName(clustername)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
-	//
-	// if cluster == nil {
-	// 	fmt.Println(err)
-	// 	return
-	// } else {
-	// 	fmt.Printf("* Got cluster UUID %s\n", *cluster.UUID)
-	// }
-
-	// // GetClusterByUUID gets cluster by UUID, returns *Cluster struct
-	// cluster, err = client.GetClusterByUUID(*cluster.UUID)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
-	//
-	// if cluster == nil {
-	// 	fmt.Println(err)
-	// 	return
-	// } else {
-	// 	fmt.Printf("* Got cluster %s by UUID\n", *cluster.Name)
-	// }
-
-	// ---- GetInfraProviders
-	// providerClientConfigs, err := client.GetInfraProviders()
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
-	// // Print out the providerClientConfig details
-	// fmt.Println("* Provider Config name: " + *providerClientConfigs[0].Name + " hostname: " + *providerClientConfigs[0].Address + " UUID: " + *providerClientConfigs[0].UUID)
-
-	// ---- GetInfraProviderByName
-	// infraProvider, err := client.GetInfraProviderByName("vsphere")
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
-	// // Print out the providerClientConfig details
-	// fmt.Println("* Provider Config name: " + *infraProvider.Name + " hostname: " + *infraProvider.Address + " UUID: " + *infraProvider.UUID)
-
-	// // Get network provider and Subnet
-	// networkProviderSubnets, err := client.GetNetworkProviderSubnets()
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
-	// // Print out the providerClientConfig details
-	// fmt.Println("* Network Provider  name: " + *networkProviderSubnets[0].Name + " CIDR: " + *networkProviderSubnets[0].CIDR + " UUID: " + *networkProviderSubnets[0].UUID)
-
-	// --- GetNetworkProviderSubnetByName
-	// Get network provider by name and return single entry
-	// networkProviderSubnet, err := client.GetNetworkProviderSubnetByName("default-network-subnet")
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
-	// // Print out the providerClientConfig details
-	// fmt.Println("* Network Provider  name: " + *networkProviderSubnet.Name + " CIDR: " + *networkProviderSubnet.CIDR + " UUID: " + *networkProviderSubnet.UUID)
-
-	// --- scale a cluster
-	// clusterUUID := string(*cluster.UUID)
-	// clusterWorkerPoolName := string("node-group")
-	// clusterSize := int64(3)
-	// scaleCluster, err := client.ScaleCluster(clusterUUID, clusterWorkerPoolName, clusterSize)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	// Print out the Println of bytes
-	// 	// to debug: uncomment below. Prints JSON payload
-	// 	//fmt.Println(string(scaleCluster))
-	// } else {
-	// 	fmt.Println("Name: " + *scaleCluster.Name + " Size: " + string(*scaleCluster.Size))
-	// }
 
 	// --- AddCluster from JSON File
 	// jsonFile := "./cluster.json"
