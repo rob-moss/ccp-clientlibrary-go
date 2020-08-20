@@ -1425,9 +1425,7 @@ func (s *Client) DeleteAddOnKubeflow(clusterUUID string) error {
 	return nil
 }
 
-// -=-=-=- patch a cluster not yet implemented
-
-// PatchCluster does the things
+// PatchCluster receives a Cluster struct and posts it to the API
 func (s *Client) PatchCluster(cluster *Cluster) (*Cluster, error) {
 
 	var data Cluster
@@ -1438,7 +1436,7 @@ func (s *Client) PatchCluster(cluster *Cluster) (*Cluster, error) {
 
 	clusterUUID := *cluster.UUID
 
-	url := fmt.Sprintf(s.BaseURL + "/v3/clusters/" + clusterUUID)
+	url := fmt.Sprintf(s.BaseURL + "/v3/clusters/" + clusterUUID + "/")
 
 	j, err := json.Marshal(cluster)
 
