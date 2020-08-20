@@ -208,12 +208,12 @@ type VsphereClientConfig struct {
 	Password *string `json:"password,omitempty"`
 }
 
-// AddOnsCatalogue List of all of the CCP Add-Ons
+// AddonsCatalogue List of all of the CCP Add-Ons
 // generated from https://mholt.github.io/json-to-go/
 // with future versions of CCP this may need to be re-generated with updated JSON catalogue from
 // path /v3/clusters/<clusteruuid>/catalog
 // this is working for CCP 6.x
-type AddOnsCatalogue struct {
+type AddonsCatalogue struct {
 	CcpMonitor struct {
 		DisplayName string `json:"displayName"`
 		Name        string `json:"name"`
@@ -1042,9 +1042,9 @@ func (s *Client) InstallAddonHarbor(clusterUUID string) error {
 	return nil
 }
 
-// DeleteAddOnLogging deletes the addon
-func (s *Client) DeleteAddOnLogging(clusterUUID string) error {
-	Debug(1, "Entered DeleteAddOnLogging for UUID "+clusterUUID)
+// DeleteAddonLogging deletes the addon
+func (s *Client) DeleteAddonLogging(clusterUUID string) error {
+	Debug(1, "Entered DeleteAddonLogging for UUID "+clusterUUID)
 
 	if clusterUUID == "" {
 		return errors.New("Cluster UUID to delete is required")
@@ -1065,9 +1065,9 @@ func (s *Client) DeleteAddOnLogging(clusterUUID string) error {
 	return nil
 }
 
-// DeleteAddOnMonitor deletes the addon
-func (s *Client) DeleteAddOnMonitor(clusterUUID string) error {
-	Debug(1, "Entered DeleteAddOnMonitor for UUID "+clusterUUID)
+// DeleteAddonMonitor deletes the addon
+func (s *Client) DeleteAddonMonitor(clusterUUID string) error {
+	Debug(1, "Entered DeleteAddonMonitor for UUID "+clusterUUID)
 
 	if clusterUUID == "" {
 		return errors.New("Cluster UUID to delete is required")
@@ -1089,9 +1089,9 @@ func (s *Client) DeleteAddOnMonitor(clusterUUID string) error {
 	return nil
 }
 
-// DeleteAddOnIstioInstance deletes the addon
-func (s *Client) DeleteAddOnIstioInstance(clusterUUID string) error {
-	Debug(1, "Entered DeleteAddOnIstioInstance for UUID "+clusterUUID)
+// DeleteAddonIstioInstance deletes the addon
+func (s *Client) DeleteAddonIstioInstance(clusterUUID string) error {
+	Debug(1, "Entered DeleteAddonIstioInstance for UUID "+clusterUUID)
 
 	if clusterUUID == "" {
 		return errors.New("Cluster UUID to delete is required")
@@ -1113,9 +1113,9 @@ func (s *Client) DeleteAddOnIstioInstance(clusterUUID string) error {
 	return nil
 }
 
-// DeleteAddOnIstioOp deletes the addon
-func (s *Client) DeleteAddOnIstioOp(clusterUUID string) error {
-	Debug(1, "Entered DeleteAddOnIstioOp for UUID "+clusterUUID)
+// DeleteAddonIstioOp deletes the addon
+func (s *Client) DeleteAddonIstioOp(clusterUUID string) error {
+	Debug(1, "Entered DeleteAddonIstioOp for UUID "+clusterUUID)
 
 	if clusterUUID == "" {
 		return errors.New("Cluster UUID to delete is required")
@@ -1137,15 +1137,39 @@ func (s *Client) DeleteAddOnIstioOp(clusterUUID string) error {
 	return nil
 }
 
-// DeleteAddOnIstio install both
-func (s *Client) DeleteAddOnIstio(clusterUUID string) error {
-	err := s.DeleteAddOnIstioInstance(clusterUUID)
+// DeleteAddonDashboard deletes the addon
+func (s *Client) DeleteAddonDashboard(clusterUUID string) error {
+	Debug(1, "Entered DeleteAddonDashboard for UUID "+clusterUUID)
+
+	if clusterUUID == "" {
+		return errors.New("Cluster UUID to delete is required")
+	}
+
+	url := s.BaseURL + "/v3/clusters/" + clusterUUID + "/addons/dashboard/"
+	Debug(2, "Sending HTTP delte to "+url)
+
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return err
+	}
+	_, err = s.doRequest(req)
+	if err != nil {
+		return err
+	}
+
+	Debug(2, "Request sent to API with success response")
+	return nil
+}
+
+// DeleteAddonIstio install both
+func (s *Client) DeleteAddonIstio(clusterUUID string) error {
+	err := s.DeleteAddonIstioInstance(clusterUUID)
 	if err != nil {
 		Debug(1, "Failed to delete Add-On Istio Instance: "+string(err.Error()))
 		return err
 	}
 	time.Sleep(2 * time.Second) // wait 2 seconds before sending the next request
-	err = s.DeleteAddOnIstioOp(clusterUUID)
+	err = s.DeleteAddonIstioOp(clusterUUID)
 	if err != nil {
 		Debug(1, "Failed to delete Add-On Istio Operator: "+string(err.Error()))
 		return err
@@ -1153,9 +1177,9 @@ func (s *Client) DeleteAddOnIstio(clusterUUID string) error {
 	return nil
 }
 
-// DeleteAddOnHarborInstance deletes the addon
-func (s *Client) DeleteAddOnHarborInstance(clusterUUID string) error {
-	Debug(1, "Entered DeleteAddOnHarborInstance for UUID "+clusterUUID)
+// DeleteAddonHarborInstance deletes the addon
+func (s *Client) DeleteAddonHarborInstance(clusterUUID string) error {
+	Debug(1, "Entered DeleteAddonHarborInstance for UUID "+clusterUUID)
 
 	if clusterUUID == "" {
 		return errors.New("Cluster UUID to delete is required")
@@ -1177,9 +1201,9 @@ func (s *Client) DeleteAddOnHarborInstance(clusterUUID string) error {
 	return nil
 }
 
-// DeleteAddOnHarborOp deletes the addon
-func (s *Client) DeleteAddOnHarborOp(clusterUUID string) error {
-	Debug(1, "Entered DeleteAddOnHarborOp for UUID "+clusterUUID)
+// DeleteAddonHarborOp deletes the addon
+func (s *Client) DeleteAddonHarborOp(clusterUUID string) error {
+	Debug(1, "Entered DeleteAddonHarborOp for UUID "+clusterUUID)
 
 	if clusterUUID == "" {
 		return errors.New("Cluster UUID to delete is required")
@@ -1201,15 +1225,15 @@ func (s *Client) DeleteAddOnHarborOp(clusterUUID string) error {
 	return nil
 }
 
-// DeleteAddOnHarbor delete both
-func (s *Client) DeleteAddOnHarbor(clusterUUID string) error {
-	err := s.DeleteAddOnHarborInstance(clusterUUID)
+// DeleteAddonHarbor delete both
+func (s *Client) DeleteAddonHarbor(clusterUUID string) error {
+	err := s.DeleteAddonHarborInstance(clusterUUID)
 	if err != nil {
 		Debug(1, "Failed to delete Add-On Harbor Instance: "+string(err.Error()))
 		return err
 	}
 	time.Sleep(2 * time.Second) // wait 2 seconds before sending the next request
-	err = s.DeleteAddOnHarborOp(clusterUUID)
+	err = s.DeleteAddonHarborOp(clusterUUID)
 	if err != nil {
 		Debug(1, "Failed to delete Add-On Harbor Operator: "+string(err.Error()))
 		return err
@@ -1218,7 +1242,7 @@ func (s *Client) DeleteAddOnHarbor(clusterUUID string) error {
 }
 
 // GetAddonsCatalogue returns a list of Addons
-func (s *Client) GetAddonsCatalogue(clusterUUID string) (*AddOnsCatalogue, error) {
+func (s *Client) GetAddonsCatalogue(clusterUUID string) (*AddonsCatalogue, error) {
 	// https://mholt.github.io/json-to-go/
 	Debug(3, "GetAddonsCatalogue for cluster "+clusterUUID)
 
@@ -1233,7 +1257,7 @@ func (s *Client) GetAddonsCatalogue(clusterUUID string) (*AddOnsCatalogue, error
 		return nil, err
 	}
 	Debug(3, string(bytes))
-	var data *AddOnsCatalogue
+	var data *AddonsCatalogue
 
 	err = json.Unmarshal(bytes, &data)
 	if err != nil {
@@ -1335,9 +1359,9 @@ func (s *Client) InstallAddonHXCSI(clusterUUID string) error {
 	return nil
 }
 
-// DeleteAddOnHXCSI deletes the addon
-func (s *Client) DeleteAddOnHXCSI(clusterUUID string) error {
-	Debug(1, "Entered DeleteAddOnHXCSI for UUID "+clusterUUID)
+// DeleteAddonHXCSI deletes the addon
+func (s *Client) DeleteAddonHXCSI(clusterUUID string) error {
+	Debug(1, "Entered DeleteAddonHXCSI for UUID "+clusterUUID)
 
 	if clusterUUID == "" {
 		return errors.New("Cluster UUID to delete is required")
@@ -1401,9 +1425,9 @@ func (s *Client) InstallAddonKubeflow(clusterUUID string) error {
 	return nil
 }
 
-// DeleteAddOnKubeflow deletes the addon
-func (s *Client) DeleteAddOnKubeflow(clusterUUID string) error {
-	Debug(1, "Entered DeleteAddOnKubeflow for UUID "+clusterUUID)
+// DeleteAddonKubeflow deletes the addon
+func (s *Client) DeleteAddonKubeflow(clusterUUID string) error {
+	Debug(1, "Entered DeleteAddonKubeflow for UUID "+clusterUUID)
 
 	if clusterUUID == "" {
 		return errors.New("Cluster UUID to delete is required")
