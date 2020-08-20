@@ -33,10 +33,7 @@ import (
 -- Get kubernetes version for installing clusters (from image?)
 -- AddClusterBasic - update func
 -- GetClusterAddons - list installed addons
-- GetSubnets
-- GetSubnet(by name)
-- GetProviders
-- GetProvider(by name)
+
 //
 - Control Plane install:
 -- Install v2 cluster from CCP control plane
@@ -50,6 +47,11 @@ import (
 -- Scale clusters
 
 Done:
+- GetSubnets: Done
+- GetSubnet(by name): Done
+- GetProviders: Done
+- GetProvider(by name): Done
+
 - Create JSON config: done
 - Make connection to CCP CP via Proxy (optional): done
 - Set defaults: image, sshkey, sshuser, provider, network: done
@@ -285,6 +287,65 @@ type AddOnsCatalogue struct {
 		Overrides   string `json:"overrides"`
 		Namespace   string `json:"namespace,omitempty"`
 	} `json:"_ccp-hxcsi"`
+}
+
+/*
+{
+    "count": 1,
+    "next": null,
+    "previous": null,
+    "results": [
+        {
+            "name": "ccp-harbor-operator",
+            "namespace": "ccp",
+            "overrides": "",
+            "overrideFiles": [],
+            "url": "/opt/ccp/charts/ccp-harbor-operator.tgz",
+            "status": {
+                "helmStatus": "deployed",
+                "name": "ccp-harbor-operator",
+                "overrideHash": "47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU=",
+                "status": "INSTALLED",
+                "statusDetail": "",
+                "urlInstalled": "/opt/ccp/charts/ccp-harbor-operator.tgz",
+                "versionInstalled": "1.3.3",
+                "serviceUrl": ""
+            },
+            "conflicts": [
+                "ccp-istio-operator"
+            ],
+            "dependencies": {
+                "_ccp-harbor": {
+                    "displayName": "Harbor",
+                    "name": "ccp-harbor-cr",
+                    "namespace": "ccp",
+                    "description": "Harbor registry",
+                    "url": "/opt/ccp/charts/ccp-harbor-cr.tgz"
+                }
+            },
+            "displayName": "Harbor Operator",
+            "description": "Harbor Operator"
+        }
+    ]
+}
+*/
+
+// ClusterInstalledAddons list of installed AddOn
+type ClusterInstalledAddons struct {
+	Count    int64      `json:"count"`
+	Next     int64      `json:"next"`
+	Previous int64      `json:"previous"`
+	Results  []struct { // results
+		Name        string   `json:"name"`
+		Namespace   string   `json:"namespace"`
+		DisplayName string   `json:"displayName"`
+		Description string   `json:"description"`
+		AddonStatus struct { // status
+			Name       string `json:"name"`
+			HelmStatus string `json:"helmStatus"`
+			Status     string `json:"status"`
+		} `json:"status"`
+	} `json:"results"`
 }
 
 // GetClusters function for v3
@@ -1173,6 +1234,31 @@ func (s *Client) GetAddonsCatalogue(clusterUUID string) (*AddOnsCatalogue, error
 	}
 	Debug(3, string(bytes))
 	var data *AddOnsCatalogue
+
+	err = json.Unmarshal(bytes, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+// GetClusterInstalledAddons returns a list of Addons
+func (s *Client) GetClusterInstalledAddons(clusterUUID string) (*ClusterInstalledAddons, error) {
+	Debug(3, "GetClusterInstalledAddons for cluster "+clusterUUID)
+
+	url := s.BaseURL + "/v3/clusters/" + clusterUUID + "/addons/"
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	bytes, err := s.doRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	Debug(3, string(bytes))
+	var data *ClusterInstalledAddons
 
 	err = json.Unmarshal(bytes, &data)
 	if err != nil {
