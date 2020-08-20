@@ -1427,44 +1427,41 @@ func (s *Client) DeleteAddOnKubeflow(clusterUUID string) error {
 
 // -=-=-=- patch a cluster not yet implemented
 
-// // PatchCluster does the things
-// func (s *Client) PatchCluster(cluster *Cluster) (*Cluster, error) {
+// PatchCluster does the things
+func (s *Client) PatchCluster(cluster *Cluster) (*Cluster, error) {
 
-// 	var data Cluster
+	var data Cluster
 
-// 	if nonzero(cluster.UUID) {
-// 		return nil, errors.New("Cluster.UUID is missing")
-// 	}
+	if nonzero(cluster.UUID) {
+		return nil, errors.New("Cluster.UUID is missing")
+	}
 
-// 	clusterUUID := *cluster.UUID
+	clusterUUID := *cluster.UUID
 
-// 	url := fmt.Sprintf(s.BaseURL + "/v3/clusters/" + clusterUUID)
+	url := fmt.Sprintf(s.BaseURL + "/v3/clusters/" + clusterUUID)
 
-// 	j, err := json.Marshal(cluster)
+	j, err := json.Marshal(cluster)
 
-// 	if err != nil {
+	if err != nil {
+		return nil, err
+	}
 
-// 		return nil, err
-// 	}
+	req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(j))
+	if err != nil {
+		return nil, err
+	}
 
-// 	req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(j))
-// 	if err != nil {
-// 		return nil, err
-// 	}
+	bytes, err := s.doRequest(req)
+	if err != nil {
+		return nil, err
+	}
 
-// 	bytes, err := s.doRequest(req)
+	err = json.Unmarshal(bytes, &data)
+	if err != nil {
+		return nil, err
+	}
 
-// 	if err != nil {
-// 		return nil, err
-// 	}
+	cluster = &data
 
-// 	err = json.Unmarshal(bytes, &data)
-
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	cluster = &data
-
-// 	return cluster, nil
-// }
+	return cluster, nil
+}
