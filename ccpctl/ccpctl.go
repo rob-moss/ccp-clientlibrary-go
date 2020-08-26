@@ -29,7 +29,7 @@ var defaultsFile = myself.HomeDir + "/.ccpctl.json" // also make this avaialble 
 //		1 for functions and basic data
 //		2 for warnings
 //		3 for JSON output
-var debuglvl = 1
+var debuglvl = 0
 
 // Debug function
 func Debug(level int, errmsg string) {
@@ -71,12 +71,17 @@ type Defaults struct {
 - getproviders: done
 - getsubnet: done
 - getsubnets: done
-- addcluster:
-- scalecluster:
+- addcluster: done
+- scalecluster: done
+- addclusterfromfile:
+- getAddon: done
 - installaddon:
 - deladdon:
 - delcluster:
 
+- reformat output with tabwriter
+-- https://blog.el-chavez.me/2019/05/05/golang-tabwriter-aligned-text/
+-- https://golang.org/pkg/text/tabwriter/
 
 - stretch goals:
 - base64 encode/decode password in JSON file
@@ -162,14 +167,14 @@ func menuHelp() {
 		setcluster	<clustername> [provider=providername] [subnet=subnetname] [datastore=datastore] [datacenter=dc]
 					uses defaults for provider, subnet, datastore, datacenter if not provided
 		delcluster <clustername>
-		getcluster <clustername> // pulls cluster info - master node IP(s), addons, # worker nodes
+		getcluster <clustername> // pulls cluster info - master node IP(s), Addon, # worker nodes
 		getcluster <clustername> kubeconfig // gets and outputs kubeconfig
-		getcluster <clustername> addons // lists Addons installed to cluster
+		getcluster <clustername> Addon // lists Addon installed to cluster
 		getcluster <clustername> masters // lists Master nodes installed to cluster
 		getcluster <clustername> workers // lists Worker nodes installed to cluster
 		scalecluster <clustername> workers=# [pool=poolname] // scale to this many worker nodes in a cluster
 
-	cluster addons
+	cluster Addon
 		addclusteraddon <clustername> <addon> // install an addon
 		delclusteraddon <clustername> <addon> // install an addon
 		getclusteraddon <clustername> <addon> // install an addon
@@ -371,6 +376,17 @@ func menuGetCP(Settings *Defaults) error {
 	return nil
 }
 
+func prettyPrintJSONString(jsonBody string) {
+	var prettyJSON bytes.Buffer
+
+	err := json.Indent(&prettyJSON, []byte(jsonBody), "", "\t")
+	if err != nil {
+		log.Println("JSON parse error: ", err)
+		// return err
+	}
+	fmt.Println(&prettyJSON)
+}
+
 func prettyPrintJSONCluster(cluster *ccp.Cluster) {
 	var prettyJSON bytes.Buffer
 
@@ -439,10 +455,10 @@ func prettyPrintJSONSubnet(provider *ccp.NetworkProviderSubnet) {
 	fmt.Println(&prettyJSON)
 }
 
-func prettyPrintJSONClusterAddOns(clusteraddons *ccp.ClusterInstalledAddons) {
+func prettyPrintJSONClusterAddon(clusterAddon *ccp.ClusterInstalledAddons) {
 	var prettyJSON bytes.Buffer
 
-	jsonBody, err := json.Marshal(clusteraddons)
+	jsonBody, err := json.Marshal(clusterAddon)
 	if err != nil {
 		fmt.Println("JSON Marshal error:", err)
 		return
@@ -455,10 +471,10 @@ func prettyPrintJSONClusterAddOns(clusteraddons *ccp.ClusterInstalledAddons) {
 	}
 	fmt.Println(&prettyJSON)
 }
-func prettyPrintJSONClusterAddOnsCatalogue(clusteraddons *ccp.AddOnsCatalogue) {
+func prettyPrintJSONClusterAddonCatalogue(clusterAddon *ccp.AddonsCatalogue) {
 	var prettyJSON bytes.Buffer
 
-	jsonBody, err := json.Marshal(clusteraddons)
+	jsonBody, err := json.Marshal(clusterAddon)
 	if err != nil {
 		fmt.Println("JSON Marshal error:", err)
 		return
@@ -751,6 +767,28 @@ func menuAddCluster(client *ccp.Client, args []string, Settings *Defaults) (*ccp
 	return cluster, nil
 }
 
+func menuAddClusterFromFile(client *ccp.Client, jsonFile string, jsonout bool) (*ccp.Cluster, error) {
+	// --- AddCluster from JSON File
+	// jsonFile := "./cluster.json"
+	// // Convert a JSON file to a Cluster struct
+	// newCluster, err := client.ConvertJSONToCluster(jsonFile)
+	// if err != nil {
+	// 	fmt.Println("error:", err)
+	// } else {
+	// 	fmt.Println("Success")
+	// }
+
+	// fmt.Println("* New cluster name to create: " + *newCluster.Name)
+	// createdCluster, err := client.AddCluster(newCluster)
+	// if err != nil {
+	// 	fmt.Println("Error from AddCluster:")
+	// 	fmt.Println(err)
+	// 	return
+	// }
+	// fmt.Println("* Cluster sent to API: " + *createdCluster.Name)
+	return nil, nil
+}
+
 func menuGetCluster(client *ccp.Client, clusterName string, jsonout bool) error {
 	cluster, err := client.GetClusterByName(clusterName)
 	if err != nil {
@@ -765,14 +803,26 @@ func menuGetCluster(client *ccp.Client, clusterName string, jsonout bool) error 
 	return nil
 }
 
-func menuGetClusterAddons(client *ccp.Client, clusterName string, jsonout bool) error {
+func menuGetClusterKubeconfig(client *ccp.Client, clusterName string) error {
 	cluster, err := client.GetClusterByName(clusterName)
 	if err != nil {
 		fmt.Println("GetCluster error:", err)
 		return err
 	}
 
-	// list available addons
+	prettyPrintJSONString(*cluster.KubeConfig)
+
+	return nil
+}
+
+func menuGetClusterAddon(client *ccp.Client, clusterName string, jsonout bool) error {
+	cluster, err := client.GetClusterByName(clusterName)
+	if err != nil {
+		fmt.Println("GetCluster error:", err)
+		return err
+	}
+
+	// list available Addon
 	catalogue, err := client.GetAddonsCatalogue(*cluster.UUID)
 	if err != nil {
 		fmt.Println("GetCluster error:", err)
@@ -780,9 +830,9 @@ func menuGetClusterAddons(client *ccp.Client, clusterName string, jsonout bool) 
 	}
 
 	if jsonout {
-		prettyPrintJSONClusterAddOnsCatalogue(catalogue)
+		prettyPrintJSONClusterAddonCatalogue(catalogue)
 	}
-	fmt.Println("Addons available:")
+	fmt.Println("Addon available:")
 	// this is ugly, have to revisit this
 	fmt.Println("* kubeflow: ", catalogue.CcpKubeflow.Name, "Description:", catalogue.CcpKubeflow.Description)
 	fmt.Println("* dashboard: ", catalogue.CcpKubernetesDashboard.Name, "Description:", catalogue.CcpKubernetesDashboard.Description)
@@ -792,46 +842,159 @@ func menuGetClusterAddons(client *ccp.Client, clusterName string, jsonout bool) 
 	fmt.Println("* istio: ", catalogue.CcpIstioOperator.Name, "Description:", catalogue.CcpIstioOperator.Description)
 	fmt.Println("* hx-csi: ", catalogue.CcpHxcsi.Name, "Description:", catalogue.CcpHxcsi.Description)
 	fmt.Println("")
-	// list installed addons
-	installedaddons, err := client.GetClusterInstalledAddons(*cluster.UUID)
+
+	// list installed Addon
+	installedaddon, err := client.GetClusterInstalledAddons(*cluster.UUID)
 	if err != nil {
 		fmt.Println("GetCluster error:", err)
 		return err
 	}
 
-	fmt.Println("Cluster: ", *cluster.Name, "Installed Add-Ons: ", installedaddons.Count)
-	// if no addons installed, exit clean
-	if installedaddons.Count < 1 {
+	fmt.Println("Cluster: ", *cluster.Name, "Installed Add-Ons: ", installedaddon.Count)
+	// if no Addon installed, exit clean
+	if installedaddon.Count < 1 {
 		return nil
 	}
 
 	if jsonout {
-		prettyPrintJSONClusterAddOns(installedaddons)
+		prettyPrintJSONClusterAddon(installedaddon)
 	}
-	for _, addon := range installedaddons.Results {
+	for _, addon := range installedaddon.Results {
 		fmt.Println("Installed Addon: ", addon.Name, "Status:", addon.AddonStatus.Status, "Helm Status:", addon.AddonStatus.HelmStatus, "Description:", addon.Description)
 	}
 	return nil
 }
 
-func menuGetClusterAddonsCatalogue(client *ccp.Client, clusterName string, jsonout bool) error {
+func menuGetClusterAddonCatalogue(client *ccp.Client, clusterName string, jsonout bool) error {
 	cluster, err := client.GetClusterByName(clusterName)
 	if err != nil {
 		fmt.Println("GetCluster error:", err)
 		return err
 	}
 
-	addons, err := client.GetAddonsCatalogue(*cluster.UUID)
+	addon, err := client.GetAddonsCatalogue(*cluster.UUID)
 	if err != nil {
 		fmt.Println("GetCluster error:", err)
 		return err
 	}
 
 	if jsonout {
-		prettyPrintJSONClusterAddOnsCatalogue(addons)
+		prettyPrintJSONClusterAddonCatalogue(addon)
 	}
-	fmt.Println("Addons available:")
-	fmt.Printf("%v\n", addons)
+	fmt.Println("Addon available:")
+	fmt.Printf("%v\n", addon)
+	return nil
+}
+
+func menuInstallClusterAddon(client *ccp.Client, clusterName string, addon string, jsonout bool) error {
+	cluster, err := client.GetClusterByName(clusterName)
+	if err != nil {
+		fmt.Println("GetCluster error:", err)
+		return err
+	}
+
+	switch addon {
+	case "monitoring":
+		err = client.InstallAddonMonitoring(*cluster.UUID)
+		if err != nil {
+			return err
+		}
+		fmt.Println("* Installing monitoring Addon. Check status with getaddon")
+	case "logging":
+		err = client.InstallAddonLogging(*cluster.UUID)
+		if err != nil {
+			return err
+		}
+		fmt.Println("* Installing logging Addon. Check status with getaddon")
+	case "istio":
+		err = client.InstallAddonIstio(*cluster.UUID)
+		if err != nil {
+			return err
+		}
+		fmt.Println("* Installing istio Addon. Check status with getaddon")
+	case "harbor":
+		err = client.InstallAddonHarbor(*cluster.UUID)
+		if err != nil {
+			return err
+		}
+		fmt.Println("* Installing harbor Addon. Check status with getaddon")
+	case "hx-csi":
+		err = client.InstallAddonHXCSI(*cluster.UUID)
+		if err != nil {
+			return err
+		}
+		fmt.Println("* Installing hx-csi Addon. Check status with getaddon")
+	case "kubeflow":
+		err = client.InstallAddonKubeflow(*cluster.UUID)
+		if err != nil {
+			return err
+		}
+		fmt.Println("* Installing kubeflow Addon. Check status with getaddon")
+	case "dashboard":
+		err = client.InstallAddonDashboard(*cluster.UUID)
+		if err != nil {
+			return err
+		}
+		fmt.Println("Installing dashboard Addon. Check status with getaddon")
+	default:
+		return errors.New("Unknown addon:" + addon + ".  Valid options are: monitoring, logging, istio, harbor, hx-csi, kubeflow, dashboard")
+	}
+	return nil
+}
+
+func menuDelClusterAddon(client *ccp.Client, clusterName string, addon string, jsonout bool) error {
+	cluster, err := client.GetClusterByName(clusterName)
+	if err != nil {
+		fmt.Println("GetCluster error:", err)
+		return err
+	}
+
+	switch addon {
+	case "monitoring":
+		err = client.DeleteAddonMonitor(*cluster.UUID)
+		if err != nil {
+			return err
+		}
+		fmt.Println("* Deleting monitoring Addon. Check status with getaddon")
+	case "logging":
+		err = client.DeleteAddonLogging(*cluster.UUID)
+		if err != nil {
+			return err
+		}
+		fmt.Println("* Deleting logging Addon. Check status with getaddon")
+	case "istio":
+		err = client.DeleteAddonIstio(*cluster.UUID)
+		if err != nil {
+			return err
+		}
+		fmt.Println("* Deleting istio Addon. Check status with getaddon")
+	case "harbor":
+		err = client.DeleteAddonHarbor(*cluster.UUID)
+		if err != nil {
+			return err
+		}
+		fmt.Println("* Deleting harbor Addon. Check status with getaddon")
+	case "hx-csi":
+		err = client.DeleteAddonHXCSI(*cluster.UUID)
+		if err != nil {
+			return err
+		}
+		fmt.Println("* Deleting hx-csi Addon. Check status with getaddon")
+	case "kubeflow":
+		err = client.DeleteAddonKubeflow(*cluster.UUID)
+		if err != nil {
+			return err
+		}
+		fmt.Println("* Deleting kubeflow Addon. Check status with getaddon")
+	case "dashboard":
+		err = client.DeleteAddonDashboard(*cluster.UUID)
+		if err != nil {
+			return err
+		}
+		fmt.Println("Deleting dashboard Addon. Check status with getaddon")
+	default:
+		return errors.New("Unknown addon:" + addon + ".  Valid options are: monitoring, logging, istio, harbor, hx-csi, kubeflow, dashboard")
+	}
 	return nil
 }
 
@@ -905,6 +1068,27 @@ func menuGetSubnet(client *ccp.Client, subnetName string, jsonout bool) {
 	}
 }
 
+func menuScaleCluster(client *ccp.Client, clusterName string, workers int64, jsonout bool) error {
+	cluster, err := client.GetClusterByName(clusterName)
+	if err != nil {
+		fmt.Println("ScaleCluster GetClusterByName error:", err)
+		return err
+	}
+
+	Debug(2, "Got cluster "+*cluster.Name)
+	workerpoolname := "node-group"
+
+	scalecluster, err := client.ScaleCluster(*cluster.UUID, workerpoolname, workers)
+	if err != nil {
+		fmt.Println("ScaleCluster error:", err)
+		return err
+	}
+
+	fmt.Println("Cluster worker pool: ", scalecluster.Name, " scaled to size ", scalecluster.Size)
+
+	return nil
+}
+
 // ccpctl help
 
 // add Control Plane info
@@ -925,13 +1109,13 @@ func menuGetSubnet(client *ccp.Client, subnetName string, jsonout bool) {
 //		setcluster	<clustername> [provider=providername] [subnet=subnetname] [datastore=datastore] [datacenter=dc]
 //					uses defaults for provider, subnet, datastore, datacenter if not provided
 //		delcluster <clustername>
-//		getcluster <clustername> // pulls cluster info - master node IP(s), addons, # worker nodes
+//		getcluster <clustername> // pulls cluster info - master node IP(s), Addon, # worker nodes
 //		getcluster <clustername> kubeconfig // gets and outputs kubeconfig
-//		getcluster <clustername> addons // lists Addons installed to cluster
+//		getcluster <clustername> Addon // lists Addon installed to cluster
 //		getcluster <clustername> masters // lists Master nodes installed to cluster
 //		getcluster <clustername> workers // lists Worker nodes installed to cluster
 //		scalecluster <clustername> workers=# [pool=poolname] // scale to this many worker nodes in a cluster
-// cluster addons
+// cluster Addon
 // 		addclusteraddon <clustername> <addon> // install an addon
 // 		delclusteraddon <clustername> <addon> // install an addon
 // 		getclusteraddon <clustername> <addon> // install an addon
@@ -980,15 +1164,25 @@ func main() {
 		}
 	}
 
-	// Check if JSON output is requested
+	// Check global flags like jsonout or debug
 	jsonout := false
+	// debuglvl = 0 // debug level set above
 	for _, arg := range os.Args[1:] {
-		switch arg {
+		param, value := splitparam(arg)
+		switch param {
 		case "json":
 			jsonout = true
 			fmt.Println("* Setting JSON output")
+		case "debug":
+			debuglvl = strtoint(value)
+			client.SetDebug(strtoint(value))
+			Debug(1, "Debug level set to "+value)
 		}
 	}
+
+	// ----
+	// do the same for debuglvl
+	// ----
 
 	//
 	// ---- Main code to check commandline params ---- //
@@ -1056,7 +1250,13 @@ func main() {
 			menuGetClusters(client, jsonout)
 			return
 		case "scalecluster":
-			fmt.Println("scalecluster [<clustername>] workers=#")
+			if len(os.Args) < 3 {
+				menuClusterHelp()
+				fmt.Println("scalecluster <clustername workers=#")
+				return
+			}
+
+			menuScaleCluster(client, os.Args[2], strtoint64(os.Args[3]), jsonout)
 			return
 		// Infra providers
 		case "getproviders":
@@ -1072,25 +1272,40 @@ func main() {
 		case "getsubnet":
 			menuGetSubnet(client, os.Args[2], jsonout)
 			return
-		// addons todo
+		// Addon todo
 		case "getaddons":
-			// if no cluster specified, get all available addons
+			// if no cluster specified, get all available Addon
 			if len(os.Args[1:]) < 2 {
-				// menuGetClusterAddonsCatalogue(client, os.Args[2], jsonout)
+				// menuGetClusterAddonCatalogue(client, os.Args[2], jsonout)
 				fmt.Println("Need cluster name, exiting")
 				return
 			}
-			// if cluster specified, get all addons installed to cluster
-			// fmt.Println("getaddons [<clustername>]")
-			menuGetClusterAddons(client, os.Args[2], jsonout)
+			// if cluster specified, get all Addon installed to cluster
+			// fmt.Println("getAddon [<clustername>]")
+			menuGetClusterAddon(client, os.Args[2], jsonout)
 			return
 		case "installaddon":
-			fmt.Println("installaddon [<clustername>] <addon>")
+			if len(os.Args[1:]) < 3 {
+				fmt.Println("installaddon [<clustername>] <addon>")
+				fmt.Println("Valid Addons are: monitoring, logging, istio, harbor, hx-csi, kubeflow, dashboard")
+				return
+			}
+
+			err = menuInstallClusterAddon(client, os.Args[2], os.Args[3], jsonout)
+			if err != nil {
+				fmt.Println("Error: ", err)
+			}
 			return
 		case "deladdon":
 			fmt.Println("deladdon [<clustername>] <addon>")
 			return
 		// print help
+		case "addclusterfromfile":
+			if len(os.Args[1:]) < 2 {
+				fmt.Println("Need cluster filename, exiting")
+				return
+			}
+			menuAddClusterFromFile(client, os.Args[2], jsonout)
 		case "help":
 			fmt.Println("help")
 			menuHelp()
@@ -1215,14 +1430,14 @@ func main() {
 	// 	return
 	// }
 
-	// // GetAddons uses UUID
-	// addons, err := client.GetAddonsCatalogue(*cluster.UUID)
+	// // GetAddon uses UUID
+	// Addon, err := client.GetAddonCatalogue(*cluster.UUID)
 	// if err != nil {
 	// 	fmt.Println(err)
 	// 	return
 	// }
 	//
-	// j, err := json.Marshal(addons.CcpHxcsi)
+	// j, err := json.Marshal(Addon.CcpHxcsi)
 	// if err != nil {
 	// 	fmt.Println(err)
 	// 	return
@@ -1238,7 +1453,7 @@ func main() {
 	// 	return
 	// }
 
-	// err = client.DeleteAddOnHXCSI(*cluster.UUID)
+	// err = client.DeleteAddonHXCSI(*cluster.UUID)
 	// if err != nil {
 	// 	ccp.Debug(1, "DeleteAddonHXCSI Error:")
 	// 	fmt.Println(err)
@@ -1317,29 +1532,29 @@ func main() {
 	// }
 	// time.Sleep(2 * time.Second)
 
-	// ---- delete addons
-	// err = client.DeleteAddOnLogging(*cluster.UUID)
+	// ---- delete Addon
+	// err = client.DeleteAddonLogging(*cluster.UUID)
 	// if err != nil {
 	// 	ccp.Debug(1, "Error:")
 	// 	fmt.Println(err)
 	// 	return
 	// }
 
-	// err = client.DeleteAddOnMonitor(*cluster.UUID)
+	// err = client.DeleteAddonMonitor(*cluster.UUID)
 	// if err != nil {
 	// 	ccp.Debug(1, "Error:")
 	// 	fmt.Println(err)
 	// 	return
 	// }
 
-	// err = client.DeleteAddOnIstio(*cluster.UUID)
+	// err = client.DeleteAddonIstio(*cluster.UUID)
 	// if err != nil {
 	// 	ccp.Debug(1, "Error:")
 	// 	fmt.Println(err)
 	// 	return
 	// }
 
-	// err = client.DeleteAddOnHarbor(*cluster.UUID)
+	// err = client.DeleteAddonHarbor(*cluster.UUID)
 	// if err != nil {
 	// 	ccp.Debug(1, "Error:")
 	// 	fmt.Println(err)

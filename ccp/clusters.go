@@ -573,6 +573,11 @@ func (s *Client) DeleteCluster(clusterUUID string) error {
 
 // Not working?
 
+// SetDebug sets the debug level
+func (s *Client) SetDebug(debug int) {
+	debuglvl = debug
+}
+
 // AddClusterBasic add a v3 cluster the easy way
 func (s *Client) AddClusterBasic(cluster *Cluster) (*Cluster, error) {
 	Debug(1, "Entered AddClusterBasic for cluster "+string(*cluster.Name))
