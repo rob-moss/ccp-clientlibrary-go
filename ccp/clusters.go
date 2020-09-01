@@ -1385,7 +1385,7 @@ func (s *Client) DeleteAddonDashboard(clusterUUID string) error {
 		return errors.New("Cluster UUID to delete is required")
 	}
 
-	url := s.BaseURL + "/v3/clusters/" + clusterUUID + "/addons/dashboard/"
+	url := s.BaseURL + "/v3/clusters/" + clusterUUID + "/addons/kubernetes-dashboard/"
 	Debug(2, "Sending HTTP delte to "+url)
 
 	req, err := http.NewRequest("DELETE", url, nil)
