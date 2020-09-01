@@ -604,8 +604,6 @@ func (s *Client) AddCluster(cluster *Cluster) (*Cluster, error) {
 
 	j, err := json.Marshal(&cluster)
 
-	log.Printf("[DEBUG] ******* nodePool %+v", string(j))
-
 	if err != nil {
 		Debug(1, "Errors marshaling with json.Marshal(): "+string(err.Error()))
 		return nil, err
@@ -748,8 +746,6 @@ func (s *Client) AddClusterSynchronous(cluster *Cluster) (*Cluster, error) {
 
 		status, err = s.GetClusterStatusByName(*cluster.Name)
 
-		fmt.Printf(" [DEBUG] ***************** CLUSTER STATUS FINISHED: %+v", *status)
-
 		if err != nil {
 			return nil, err
 		}
@@ -757,8 +753,6 @@ func (s *Client) AddClusterSynchronous(cluster *Cluster) (*Cluster, error) {
 		time.Sleep(10 * time.Second)
 
 	}
-
-	log.Printf(" [DEBUG] ***************** CLUSTER STATUS FINISHED: %+v", status)
 
 	return &data, nil
 
