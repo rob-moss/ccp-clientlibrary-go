@@ -547,43 +547,57 @@ func (s *Client) AddCluster(cluster *Cluster) (*Cluster, error) {
 	// https://stackoverflow.com/questions/44320960/omitempty-doesnt-omit-interface-nil-values-in-json
 	// *cluster.MasterNodePool.Nodes returns &[] and since this is not nil, omitempty, won't omit it when we marshal. Instead it includes nodes: null
 	// which CCP doesn't like. Therefore we need to check if it's empty and then set it to nil.
-	if len(*cluster.MasterNodePool.Nodes) == 0 {
-		cluster.MasterNodePool.Nodes = nil
-	}
 
+	if cluster.MasterNodePool.Nodes != nil { // this check is for the CCP clientlibrary / ccpctl only
+		if len(*cluster.MasterNodePool.Nodes) == 0 { // this check is for the TF library creating a zero sized array
+			cluster.MasterNodePool.Nodes = nil
+		}
+	}
 	// Same as above but there can be multiple pools of worker nodes, therefore we need to iterate through, check if the nodes are empty,
 	// and if so set them to nil
 	var attr WorkerNodePool
 
-	for i := 0; i < len(*cluster.WorkerNodePool); i++ {
-		attr = (*cluster.WorkerNodePool)[i]
+	if cluster.WorkerNodePool != nil { // check if this exists, if it does then process it
+		for i := 0; i < len(*cluster.WorkerNodePool); i++ {
+			attr = (*cluster.WorkerNodePool)[i]
 
-		if len(*attr.Nodes) == 0 {
-			attr.Nodes = nil
+			if attr.Nodes != nil {
+				if len(*attr.Nodes) == 0 {
+					attr.Nodes = nil
+				}
+				(*cluster.WorkerNodePool)[i] = attr
+			}
 		}
-
-		(*cluster.WorkerNodePool)[i] = attr
-
 	}
 
-	if len(*cluster.NTPPools) == 0 {
-		cluster.NTPPools = nil
+	if cluster.NTPPools != nil { // check if this exists, if it does then process it
+		if len(*cluster.NTPPools) == 0 {
+			cluster.NTPPools = nil
+		}
 	}
 
-	if len(*cluster.NTPServers) == 0 {
-		cluster.NTPServers = nil
+	if cluster.NTPServers != nil {
+		if len(*cluster.NTPServers) == 0 {
+			cluster.NTPServers = nil
+		}
 	}
 
-	if len(*cluster.DockerNoProxy) == 0 {
-		cluster.DockerNoProxy = nil
+	if cluster.DockerNoProxy != nil {
+		if len(*cluster.DockerNoProxy) == 0 {
+			cluster.DockerNoProxy = nil
+		}
 	}
 
-	if len(*cluster.RegistriesRootCA) == 0 {
-		cluster.RegistriesRootCA = nil
+	if cluster.RegistriesRootCA != nil {
+		if len(*cluster.RegistriesRootCA) == 0 {
+			cluster.RegistriesRootCA = nil
+		}
 	}
 
-	if len(*cluster.RegistriesInsecure) == 0 {
-		cluster.RegistriesInsecure = nil
+	if cluster.RegistriesInsecure != nil {
+		if len(*cluster.RegistriesInsecure) == 0 {
+			cluster.RegistriesInsecure = nil
+		}
 	}
 
 	url := s.BaseURL + "/v3/clusters/"
