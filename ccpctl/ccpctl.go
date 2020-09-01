@@ -31,6 +31,8 @@ var defaultsFile = myself.HomeDir + "/.ccpctl.json" // also make this avaialble 
 //		3 for JSON output
 var debuglvl = 0
 
+var jsonout = false
+
 // Debug function
 func Debug(level int, errmsg string) {
 	if level <= debuglvl {
@@ -75,8 +77,8 @@ type Defaults struct {
 - scalecluster: done
 - addclusterfromfile:
 - getAddon: done
-- installaddon:
-- deladdon:
+- installaddon: done
+- deladdon: done
 - delcluster:
 
 - reformat output with tabwriter
@@ -110,6 +112,7 @@ func readDefaults() (*Defaults, error) {
 	}
 	// fmt.Println("JSON Unmarshal Success")
 	// fmt.Printf("Struct: %+v\n", defaults)
+	Debug(1, "Read defaults file "+defaultsFile+" successfully.")
 
 	return &defaults, nil
 }
@@ -132,6 +135,7 @@ func writeDefaults(defaults *Defaults) error {
 		return err
 	}
 
+	Debug(1, "Written to defaults file "+defaultsFile+" successfully.")
 	return nil
 }
 
@@ -506,9 +510,11 @@ func menuGetClusters(client *ccp.Client, jsonout bool) {
 	// return nil
 }
 
-func getKubeVerFromImage(value string, a string, b string) string {
+func getKubeVerFromImage(value string) string {
 	// https://www.dotnetperls.com/between-before-after-go
 	// Get substring between two strings.
+	a := "image-"
+	b := "-ubuntu18"
 	posFirst := strings.Index(value, a)
 	if posFirst == -1 {
 		return ""
@@ -522,6 +528,11 @@ func getKubeVerFromImage(value string, a string, b string) string {
 		return ""
 	}
 	return value[posFirstAdjusted:posLast]
+}
+
+func inttostr(int int) string {
+	str := strconv.Itoa(int)
+	return str
 }
 
 func strtoint(string string) int {
@@ -704,7 +715,7 @@ func menuAddCluster(client *ccp.Client, args []string, Settings *Defaults) (*ccp
 
 	// all settings checked, should have everything ready
 
-	kubernetesversion := getKubeVerFromImage(newclimage, "image-", "-ubuntu18")
+	kubernetesversion := getKubeVerFromImage(newclimage)
 	newCluster := &ccp.Cluster{
 		Name: &newclname,
 		Type: ccp.String("vsphere"), // always vSphere
@@ -720,6 +731,7 @@ func menuAddCluster(client *ccp.Client, args []string, Settings *Defaults) (*ccp
 				SSHUser:           &Settings.SSHUser,       // from Defaults
 				SSHKey:            &Settings.SSHKey,        // from Defaults
 				KubernetesVersion: &kubernetesversion,      // from Image
+				Nodes:             &[]ccp.Node{},
 			},
 		},
 		MasterNodePool: &ccp.MasterNodePool{
@@ -731,6 +743,7 @@ func menuAddCluster(client *ccp.Client, args []string, Settings *Defaults) (*ccp
 			SSHUser:           &Settings.SSHUser,
 			SSHKey:            &Settings.SSHKey,
 			KubernetesVersion: &kubernetesversion,
+			Nodes:             &[]ccp.Node{},
 		},
 		Infra: &ccp.Infra{
 			Datastore:  &newcldstore,
@@ -752,9 +765,9 @@ func menuAddCluster(client *ccp.Client, args []string, Settings *Defaults) (*ccp
 		},
 	}
 
-	// if jsonout {
-	// 	prettyPrintJSONCluster(newCluster)
-	// }
+	if jsonout || debuglvl == 3 {
+		prettyPrintJSONCluster(newCluster)
+	}
 
 	fmt.Println("* Sending new cluster to be created: ", newCluster.Name)
 
@@ -1068,7 +1081,7 @@ func menuGetSubnet(client *ccp.Client, subnetName string, jsonout bool) {
 	}
 }
 
-func menuScaleCluster(client *ccp.Client, clusterName string, workers int64, jsonout bool) error {
+func menuScaleCluster(client *ccp.Client, clusterName string, workers int, jsonout bool) error {
 	cluster, err := client.GetClusterByName(clusterName)
 	if err != nil {
 		fmt.Println("ScaleCluster GetClusterByName error:", err)
@@ -1080,20 +1093,19 @@ func menuScaleCluster(client *ccp.Client, clusterName string, workers int64, jso
 
 	scalecluster, err := client.ScaleCluster(*cluster.UUID, workerpoolname, workers)
 	if err != nil {
-		fmt.Println("ScaleCluster error:", err)
+		fmt.Println("ScaleCluster error: ", err)
 		return err
 	}
 
-	fmt.Println("Cluster worker pool: ", scalecluster.Name, " scaled to size ", scalecluster.Size)
+	fmt.Println("Cluster worker pool: ", *scalecluster.Name, " scaled to size "+inttostr(workers))
 
 	return nil
 }
 
 // ccpctl help
-
+//
 // add Control Plane info
 //		setcp cpname=cpname provider=providername subnet=subnetname datastore=datastore datacenter=dc
-//		setcp cpName=cpname [provider=providername] [subnet=subnetname] [datastore=datastore] [datacenter=dc]
 //		setcp cpNetworkProviderUUID // looks up name, sets default
 //		setcp cpCloudProviderUUID // looks up name, sets default
 //		setcp cpNetworkVLAN // vSphere PortGroup
@@ -1150,7 +1162,7 @@ func main() {
 	timediff := t2.Sub(t1).Minutes()
 	// fmt.Println(int64(timediff), "Minutes elapsed since login")
 	if timediff >= float64(180) || Settings.CPToken == "" {
-		fmt.Println("* Logging in again")
+		fmt.Println("* Token expired, Logging in again")
 		err := client.Login(client)
 		if err != nil {
 			fmt.Println(err)
@@ -1164,8 +1176,11 @@ func main() {
 		}
 	}
 
-	// Check global flags like jsonout or debug
-	jsonout := false
+	// Check global flags like
+	// * jsonout
+	// * debug
+	//
+	jsonout = false
 	// debuglvl = 0 // debug level set above
 	for _, arg := range os.Args[1:] {
 		param, value := splitparam(arg)
@@ -1197,6 +1212,12 @@ func main() {
 			}
 			Settings.CPToken = client.XAuthToken // keep the xauthtoken
 			Settings.CPTokenTime = time.Now()    // timestamp now
+			// write to defaults
+			err = writeDefaults(Settings)
+			if err != nil {
+				fmt.Println("* Write Defults error: ", err)
+				return
+			}
 			return
 		case "setdefault":
 			// fmt.Println("setdefault " + string(pos))
@@ -1252,11 +1273,11 @@ func main() {
 		case "scalecluster":
 			if len(os.Args) < 3 {
 				menuClusterHelp()
-				fmt.Println("scalecluster <clustername workers=#")
+				fmt.Println("scalecluster clustername workers=#")
 				return
 			}
-
-			menuScaleCluster(client, os.Args[2], strtoint64(os.Args[3]), jsonout)
+			_, workers := splitparam(os.Args[3])
+			menuScaleCluster(client, os.Args[2], strtoint(workers), jsonout)
 			return
 		// Infra providers
 		case "getproviders":

@@ -21,8 +21,10 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	validator "gopkg.in/validator.v2"
@@ -84,7 +86,7 @@ type Cluster struct {
 	KubeConfig           *string               `json:"kubeconfig,omitempty"`
 	IPAllocationMethod   *string               `json:"ip_allocation_method,omitempty" validate:"nonzero"`
 	MasterVIP            *string               `json:"master_vip,omitempty"`
-	LoadBalancerIPNum    *int64                `json:"load_balancer_num,omitempty"  validate:"nonzero"`
+	LoadBalancerIPNum    *int64                `json:"load_balancer_num,omitempty"`
 	SubnetUUID           *string               `json:"subnet_id,omitempty"`
 	NTPPools             *[]string             `json:"ntp_pools,omitempty"`
 	NTPServers           *[]string             `json:"ntp_servers,omitempty"`
@@ -94,7 +96,7 @@ type Cluster struct {
 	DockerProxyHTTP      *string               `json:"docker_http_proxy,omitempty"`
 	DockerProxyHTTPS     *string               `json:"docker_https_proxy,omitempty"`
 	DockerBIP            *string               `json:"docker_bip,omitempty"`
-	Infra                *Infra                `json:"vsphere_infra,omitempty"  validate:"nonzero"`
+	Infra                *Infra                `json:"vsphere_infra"  validate:"nonzero"`
 	MasterNodePool       *MasterNodePool       `json:"master_group,omitempty"  validate:"nonzero" `
 	WorkerNodePool       *[]WorkerNodePool     `json:"node_groups,omitempty"  validate:"nonzero" `
 	NetworkPlugin        *NetworkPlugin        `json:"network_plugin_profile,omitempty" validate:"nonzero"`
@@ -120,7 +122,7 @@ type WorkerNodePool struct {
 	GPUs              *[]string `json:"gpus,omitempty"`                         //v3
 	SSHUser           *string   `json:"ssh_user,omitempty"`                     //v3
 	SSHKey            *string   `json:"ssh_key,omitempty"`                      //v3
-	Node              *[]Node   `json:"nodes,omitempty"`                        //v3
+	Nodes             *[]Node   `json:"nodes,omitempty"`                        //v3
 	KubernetesVersion *string   `json:"kubernetes_version,omitempty"`           //v3
 }
 
@@ -148,7 +150,7 @@ type MasterNodePool struct {
 	GPUs              *[]string `json:"gpus,omitempty"`                         //v3
 	SSHUser           *string   `json:"ssh_user,omitempty"`                     //v3
 	SSHKey            *string   `json:"ssh_key,omitempty"`                      //v3
-	Node              *[]Node   `json:"nodes,omitempty"`                        //v3
+	Nodes             *[]Node   `json:"nodes,omitempty"`                        //v3
 	KubernetesVersion *string   `json:"kubernetes_version,omitempty"`           //v3
 }
 
@@ -157,8 +159,8 @@ type Node struct {
 	// v3 clusters
 	Name         *string `json:"name,omitempty"`
 	Status       *string `json:"status,omitempty"`
-	StatusDetail *string `json:"status_detail,omitempty" validate:"nonzero"`
-	StatusReason *string `json:"status_reason,omitempty" validate:"nonzero"`
+	StatusDetail *string `json:"status_detail,omitempty" `
+	StatusReason *string `json:"status_reason,omitempty" `
 	PublicIP     *string `json:"public_ip,omitempty"`
 	PrivateIP    *string `json:"private_ip,omitempty"`
 	Phase        *string `json:"phase,omitempty"`
@@ -289,47 +291,6 @@ type AddonsCatalogue struct {
 	} `json:"_ccp-hxcsi"`
 }
 
-/*
-{
-    "count": 1,
-    "next": null,
-    "previous": null,
-    "results": [
-        {
-            "name": "ccp-harbor-operator",
-            "namespace": "ccp",
-            "overrides": "",
-            "overrideFiles": [],
-            "url": "/opt/ccp/charts/ccp-harbor-operator.tgz",
-            "status": {
-                "helmStatus": "deployed",
-                "name": "ccp-harbor-operator",
-                "overrideHash": "47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU=",
-                "status": "INSTALLED",
-                "statusDetail": "",
-                "urlInstalled": "/opt/ccp/charts/ccp-harbor-operator.tgz",
-                "versionInstalled": "1.3.3",
-                "serviceUrl": ""
-            },
-            "conflicts": [
-                "ccp-istio-operator"
-            ],
-            "dependencies": {
-                "_ccp-harbor": {
-                    "displayName": "Harbor",
-                    "name": "ccp-harbor-cr",
-                    "namespace": "ccp",
-                    "description": "Harbor registry",
-                    "url": "/opt/ccp/charts/ccp-harbor-cr.tgz"
-                }
-            },
-            "displayName": "Harbor Operator",
-            "description": "Harbor Operator"
-        }
-    ]
-}
-*/
-
 // ClusterInstalledAddons list of installed AddOn
 type ClusterInstalledAddons struct {
 	Count    int64      `json:"count"`
@@ -385,6 +346,25 @@ func (s *Client) GetClusters() ([]Cluster, error) {
 	return data, nil
 }
 
+// GetClusterStatusByName get all clusters, iterate through to find slice matching clusterName
+func (s *Client) GetClusterStatusByName(clusterName string) (*string, error) {
+	Debug(1, "GetClusterStatusByName")
+
+	clusters, err := s.GetClusters()
+	if err != nil {
+		return nil, err
+	}
+
+	for i, x := range clusters {
+		Debug(3, "Iteration "+strconv.Itoa(i)+" Cluster found: "+string(*x.Name)+"\n")
+		if string(clusterName) == string(*x.Name) {
+			Debug(2, "Found matching cluster "+clusterName+" = "+*x.Name)
+			return x.Status, nil
+		}
+	}
+	return nil, errors.New("Cannot find cluster " + clusterName)
+}
+
 // GetClusterByName get all clusters, iterate through to find slice matching clusterName
 func (s *Client) GetClusterByName(clusterName string) (*Cluster, error) {
 	Debug(1, "GetClusterByName")
@@ -431,11 +411,11 @@ func (s *Client) GetClusterByUUID(clusterUUID string) (*Cluster, error) {
 // ScaleCluster spec for JSON scale
 type ScaleCluster struct {
 	Name *string `json:"name" validate:"nonzero"`
-	Size *int64  `json:"size" validate:"nonzero"`
+	Size *int    `json:"size" validate:"nonzero"`
 }
 
 // ScaleCluster scales an existing cluster
-func (s *Client) ScaleCluster(clusterUUID, workerPoolName string, size int64) (*ScaleCluster, error) {
+func (s *Client) ScaleCluster(clusterUUID, workerPoolName string, size int) (*Cluster, error) {
 	Debug(1, "Func: ScaleCluster")
 
 	url := s.BaseURL + "/v3/clusters/" + clusterUUID + "/node-pools/" + workerPoolName + "/"
@@ -443,7 +423,7 @@ func (s *Client) ScaleCluster(clusterUUID, workerPoolName string, size int64) (*
 
 	cluserScale := ScaleCluster{
 		Name: String(workerPoolName),
-		Size: Int64(size),
+		Size: Int(size),
 	}
 	j, err := json.Marshal(cluserScale)
 	if err != nil {
@@ -454,15 +434,18 @@ func (s *Client) ScaleCluster(clusterUUID, workerPoolName string, size int64) (*
 
 	req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(j))
 	if err != nil {
+		Debug(1, "http.NewRequest PATCH error "+err.Error())
 		return nil, err
 	}
 
 	bytes, err := s.doRequest(req)
 	if err != nil {
+		Debug(1, "http.doRequest error "+err.Error())
+		Debug(1, string(bytes))
 		return nil, err
 	}
 
-	var data ScaleCluster
+	var data Cluster
 	err = json.Unmarshal(bytes, &data)
 	if err != nil {
 		return nil, err
@@ -494,8 +477,8 @@ func (s *Client) ConvertJSONToCluster(jsonFile string) (*Cluster, error) {
 	return &newCluster, nil
 }
 
-// AddCluster creates a new cluster
-func (s *Client) AddCluster(cluster *Cluster) (*Cluster, error) {
+// AddClusterOld creates a new cluster without much error checking
+func (s *Client) AddClusterOld(cluster *Cluster) (*Cluster, error) {
 	Debug(1, "Entered AddCluster for "+string(*cluster.Name))
 
 	Debug(2, "Start validating Cluster struct")
@@ -548,6 +531,225 @@ func (s *Client) AddCluster(cluster *Cluster) (*Cluster, error) {
 	return &data, nil
 }
 
+// AddCluster creates a new cluster with error checking (Conor Murphy updates)
+func (s *Client) AddCluster(cluster *Cluster) (*Cluster, error) {
+
+	Debug(1, "Entered AddCluster for "+string(*cluster.Name))
+
+	Debug(2, "Start validating Cluster struct")
+	errs := validator.Validate(cluster)
+	if errs != nil {
+		Debug(1, "Errors validating Cluster struct with validator.Validate(): "+string(errs.Error()))
+		return nil, errs
+	}
+	Debug(3, "No Errors validating Cluster struct")
+
+	// https://stackoverflow.com/questions/44320960/omitempty-doesnt-omit-interface-nil-values-in-json
+	// *cluster.MasterNodePool.Nodes returns &[] and since this is not nil, omitempty, won't omit it when we marshal. Instead it includes nodes: null
+	// which CCP doesn't like. Therefore we need to check if it's empty and then set it to nil.
+	if len(*cluster.MasterNodePool.Nodes) == 0 {
+		cluster.MasterNodePool.Nodes = nil
+	}
+
+	// Same as above but there can be multiple pools of worker nodes, therefore we need to iterate through, check if the nodes are empty,
+	// and if so set them to nil
+	var attr WorkerNodePool
+
+	for i := 0; i < len(*cluster.WorkerNodePool); i++ {
+		attr = (*cluster.WorkerNodePool)[i]
+
+		if len(*attr.Nodes) == 0 {
+			attr.Nodes = nil
+		}
+
+		(*cluster.WorkerNodePool)[i] = attr
+
+	}
+
+	if len(*cluster.NTPPools) == 0 {
+		cluster.NTPPools = nil
+	}
+
+	if len(*cluster.NTPServers) == 0 {
+		cluster.NTPServers = nil
+	}
+
+	if len(*cluster.DockerNoProxy) == 0 {
+		cluster.DockerNoProxy = nil
+	}
+
+	if len(*cluster.RegistriesRootCA) == 0 {
+		cluster.RegistriesRootCA = nil
+	}
+
+	if len(*cluster.RegistriesInsecure) == 0 {
+		cluster.RegistriesInsecure = nil
+	}
+
+	url := s.BaseURL + "/v3/clusters/"
+
+	j, err := json.Marshal(&cluster)
+
+	log.Printf("[DEBUG] ******* nodePool %+v", string(j))
+
+	if err != nil {
+		Debug(1, "Errors marshaling with json.Marshal(): "+string(err.Error()))
+		return nil, err
+	}
+	Debug(3, "No errors Marshaling JSON")
+
+	Debug(2, "About to POST to url "+url)
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(j))
+	if err != nil {
+		Debug(1, "Errors POSTing with http.NewRequest: "+string(err.Error()))
+		return nil, err
+	}
+
+	bytes, err := s.doRequest(req)
+	if err != nil {
+		Debug(1, "Errors POSTing with s.doRequest: "+string(err.Error()))
+		Debug(1, "POST response: "+string(bytes))
+		return nil, err
+	}
+	Debug(3, "POST response: "+string(bytes))
+
+	var data Cluster
+
+	// err = json.Unmarshal(bytes, &data)
+	Debug(2, "Unmarshaling response")
+	err = json.Unmarshal(bytes, &data)
+	if err != nil {
+		Debug(1, "Errors unmarshaling with json.Unmarshal: "+string(err.Error()))
+		return nil, err
+	}
+	Debug(2, "Unmarshaled response successfully")
+
+	Debug(2, "CCP API responded with JSON payload for cluster named "+*data.Name+" with UUID "+*data.UUID)
+	if *data.UUID == "" {
+		Debug(1, "CCP API created cluster named "+*data.Name+" with UUID "+*data.UUID)
+	}
+
+	return &data, nil
+}
+
+// AddClusterSynchronous creates a new cluster but waits until the cluster is created before returning
+func (s *Client) AddClusterSynchronous(cluster *Cluster) (*Cluster, error) {
+
+	errs := validator.Validate(cluster)
+	if errs != nil {
+		return nil, errs
+	}
+
+	// https://stackoverflow.com/questions/44320960/omitempty-doesnt-omit-interface-nil-values-in-json
+	// *cluster.MasterNodePool.Nodes returns &[] and since this is not nil, omitempty, won't omit it when we marshal. Instead it includes nodes: null
+	// which CCP doesn't like. Therefore we need to check if it's empty and then set it to nil.
+	if len(*cluster.MasterNodePool.Nodes) == 0 {
+		cluster.MasterNodePool.Nodes = nil
+	}
+
+	// Same as above but there can be multiple pools of worker nodes, therefore we need to iterate through, check if the nodes are empty,
+	// and if so set them to nil
+	var attr WorkerNodePool
+
+	for i := 0; i < len(*cluster.WorkerNodePool); i++ {
+		attr = (*cluster.WorkerNodePool)[i]
+
+		if len(*attr.Nodes) == 0 {
+			attr.Nodes = nil
+		}
+
+		(*cluster.WorkerNodePool)[i] = attr
+
+	}
+
+	if len(*cluster.NTPPools) == 0 {
+		cluster.NTPPools = nil
+	}
+
+	if len(*cluster.NTPServers) == 0 {
+		cluster.NTPServers = nil
+	}
+
+	if len(*cluster.DockerNoProxy) == 0 {
+		cluster.DockerNoProxy = nil
+	}
+
+	if len(*cluster.RegistriesRootCA) == 0 {
+		cluster.RegistriesRootCA = nil
+	}
+
+	if len(*cluster.RegistriesInsecure) == 0 {
+		cluster.RegistriesInsecure = nil
+	}
+
+	// Need this because even though we don't have the networks setting configured for contiv-aci, if we leave it
+	// out then CCP will complain it's empty. We also can't marshall an empty slice as it converts to null which doesn't work
+	// see here for details https://apoorvam.github.io/blog/2017/golang-json-marshal-slice-as-empty-array-not-null
+	// Also, it seems CCP complains when load_balancer_ip_num is missing even though it's not used for the aci cni
+
+	if *cluster.NetworkPlugin.Name == "contiv-aci" {
+		*cluster.Infra.Networks = make([]string, 0)
+		*cluster.LoadBalancerIPNum = 1
+	}
+
+	url := s.BaseURL + "/v3/clusters/"
+
+	j, err := json.Marshal(&cluster)
+
+	log.Printf("[DEBUGGING] ******** before sending %s", string(j))
+
+	fmt.Println(string(j))
+
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(j))
+	if err != nil {
+		return nil, err
+	}
+
+	bytes, err := s.doRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	var data Cluster
+
+	fmt.Print(string(bytes))
+
+	// err = json.Unmarshal(bytes, &data)
+	err = json.Unmarshal(bytes, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	time.Sleep(10 * time.Second)
+
+	status, err := s.GetClusterStatusByName(*cluster.Name)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for *status == "CREATING" {
+
+		status, err = s.GetClusterStatusByName(*cluster.Name)
+
+		fmt.Printf(" [DEBUG] ***************** CLUSTER STATUS FINISHED: %+v", *status)
+
+		if err != nil {
+			return nil, err
+		}
+
+		time.Sleep(10 * time.Second)
+
+	}
+
+	log.Printf(" [DEBUG] ***************** CLUSTER STATUS FINISHED: %+v", status)
+
+	return &data, nil
+
+}
+
 // DeleteCluster deletes a cluster
 func (s *Client) DeleteCluster(clusterUUID string) error {
 	Debug(1, "Entered DeleteCluster for UUID "+clusterUUID)
@@ -571,11 +773,31 @@ func (s *Client) DeleteCluster(clusterUUID string) error {
 	return nil
 }
 
-// Not working?
-
 // SetDebug sets the debug level
 func (s *Client) SetDebug(debug int) {
 	debuglvl = debug
+	Debug(1, "Debug level set to "+string(debuglvl))
+}
+
+// GetKubeVerFromImage splits the image name and gets the kube ver
+func GetKubeVerFromImage(value string) string {
+	// https://www.dotnetperls.com/between-before-after-go
+	// Get substring between two strings.
+	a := "image-"
+	b := "-ubuntu18"
+	posFirst := strings.Index(value, a)
+	if posFirst == -1 {
+		return ""
+	}
+	posLast := strings.Index(value, b)
+	if posLast == -1 {
+		return ""
+	}
+	posFirstAdjusted := posFirst + len(a)
+	if posFirstAdjusted >= posLast {
+		return ""
+	}
+	return value[posFirstAdjusted:posLast]
 }
 
 // AddClusterBasic add a v3 cluster the easy way
@@ -693,7 +915,12 @@ func (s *Client) AddClusterBasic(cluster *Cluster) (*Cluster, error) {
 
 	// Since it returns a list we will use the UUID from the first element
 	cluster.InfraProviderUUID = String(*providerClientConfigs.UUID)
-	cluster.KubernetesVersion = String("1.16.3") // todo: fetch this somehow
+	// cluster.KubernetesVersion = String("1.16.3") // todo: fetch this somehow
+	// below should work, but issues with *string / string types
+	// kubever := GetKubeVerFromImage(*cluster.MasterNodePool.Template)
+	// cluster.KubernetesVersion = &kubever
+	cluster.KubernetesVersion = String(GetKubeVerFromImage(*cluster.MasterNodePool.Template))
+
 	// cluster.Type = Int64(1)
 	cluster.NetworkPlugin = &networkPlugin
 	// cluster.Deployer = &deployer
@@ -1454,22 +1681,19 @@ func (s *Client) DeleteAddonKubeflow(clusterUUID string) error {
 	return nil
 }
 
-// PatchCluster receives a Cluster struct and posts it to the API
-func (s *Client) PatchCluster(cluster *Cluster) (*Cluster, error) {
+// PatchCluster does the things
+func (s *Client) PatchCluster(cluster *Cluster, clusterUUID string) (*Cluster, error) {
 
 	var data Cluster
 
-	if nonzero(cluster.UUID) {
-		return nil, errors.New("Cluster.UUID is missing")
-	}
-
-	clusterUUID := *cluster.UUID
+	//clusterUUID := *cluster.UUID
 
 	url := fmt.Sprintf(s.BaseURL + "/v3/clusters/" + clusterUUID + "/")
 
 	j, err := json.Marshal(cluster)
 
 	if err != nil {
+
 		return nil, err
 	}
 
@@ -1479,11 +1703,13 @@ func (s *Client) PatchCluster(cluster *Cluster) (*Cluster, error) {
 	}
 
 	bytes, err := s.doRequest(req)
+
 	if err != nil {
 		return nil, err
 	}
 
 	err = json.Unmarshal(bytes, &data)
+
 	if err != nil {
 		return nil, err
 	}

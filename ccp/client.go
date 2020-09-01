@@ -19,6 +19,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"reflect"
@@ -87,6 +88,7 @@ func (s *Client) doRequest(req *http.Request) ([]byte, error) {
 
 // Bool - Helper routine used to return pointer - will used to simplify the use of the clientlibrary
 func Bool(value bool) *bool {
+	log.Printf("[DEBUG] ******* bool %+v", value)
 	return &value
 }
 
@@ -102,6 +104,9 @@ func Int64(value int64) *int64 {
 
 // String - Helper routine used to return pointer - will used to simplify the use of the clientlibrary
 func String(value string) *string {
+	if len(value) == 0 {
+		return nil
+	}
 	return &value
 }
 
